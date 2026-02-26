@@ -10,6 +10,7 @@ export function CustomSignInForm() {
   const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
+  const [warning, setWarning] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
@@ -19,6 +20,7 @@ export function CustomSignInForm() {
     startTransition(async () => {
       const res = await siteLogin(formData);
       if (res.success) {
+        if (res.warning) setWarning(res.warning);
         const redirectUrl = searchParams.get("redirect_url");
         router.push(redirectUrl && redirectUrl.startsWith("/") ? redirectUrl : "/");
         router.refresh();
@@ -95,6 +97,19 @@ export function CustomSignInForm() {
           }}
         >
           {error}
+        </p>
+      )}
+
+      {warning && (
+        <p
+          className="text-sm rounded-xl px-4 py-2"
+          style={{
+            color: "#C9A227",
+            backgroundColor: "rgba(201,162,39,0.1)",
+            border: "1px solid rgba(201,162,39,0.25)",
+          }}
+        >
+          ⚠ {warning}
         </p>
       )}
 

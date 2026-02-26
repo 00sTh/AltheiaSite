@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Users, Search, UserPlus, Shield, ShieldOff } from "lucide-react";
+import { Users, Search, UserPlus, Shield, ShieldOff, MailCheck, MailX } from "lucide-react";
 import { getAdminSiteUsers } from "@/actions/site-users";
 
 interface UsersPageProps {
@@ -79,7 +79,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                 borderBottom: "1px solid rgba(201,162,39,0.15)",
               }}
             >
-              {["Username", "E-mail", "Permissão", "Status", "Cadastro", "Ações"].map(
+              {["Username", "E-mail", "Email", "Permissão", "Status", "Cadastro", "Ações"].map(
                 (h) => (
                   <th
                     key={h}
@@ -138,6 +138,27 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                   {/* Email */}
                   <td className="px-5 py-3" style={{ color: "#C8BBA8" }}>
                     {user.email}
+                  </td>
+
+                  {/* Email verified */}
+                  <td className="px-5 py-3">
+                    {user.emailVerified ? (
+                      <span
+                        className="flex items-center gap-1 text-xs font-medium"
+                        style={{ color: "#22c55e" }}
+                        title="E-mail verificado"
+                      >
+                        <MailCheck className="h-3.5 w-3.5" /> Verificado
+                      </span>
+                    ) : (
+                      <span
+                        className="flex items-center gap-1 text-xs font-medium"
+                        style={{ color: "#e05252" }}
+                        title="E-mail não verificado"
+                      >
+                        <MailX className="h-3.5 w-3.5" /> Pendente
+                      </span>
+                    )}
                   </td>
 
                   {/* Role */}

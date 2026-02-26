@@ -23,17 +23,21 @@ datasource db {
 }
 
 model SiteUser {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  email        String   @unique
-  passwordHash String
-  role         String   @default("USER")
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  id                  String    @id @default(uuid())
+  username            String    @unique
+  email               String    @unique
+  passwordHash        String
+  role                String    @default("USER")
+  active              Boolean   @default(true)
+  emailVerified       Boolean   @default(false)
+  emailVerifyToken    String?
+  emailVerifyTokenExp DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([username])
   @@index([email])
+  @@index([emailVerifyToken])
   @@map("site_users")
 }
 

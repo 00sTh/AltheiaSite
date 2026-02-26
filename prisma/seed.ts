@@ -28,6 +28,7 @@ async function main() {
       email: "sairos@altheia.com",
       passwordHash: await hashPassword(sairosPas),
       role: "ADMIN",
+      emailVerified: true,
     },
   });
   console.log(`✓ SiteUser admin criado: ${sairos.username} (${sairos.email})`);

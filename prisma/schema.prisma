@@ -18,18 +18,25 @@ datasource db {
 
 /// Usuários do sistema com login próprio (auth sem Clerk)
 model SiteUser {
-  id           String   @id @default(uuid())
-  username     String   @unique
-  email        String   @unique
-  passwordHash String
+  id                  String    @id @default(uuid())
+  username            String    @unique
+  email               String    @unique
+  passwordHash        String
   /// USER | ADMIN
-  role         String   @default("USER")
-  active       Boolean  @default(true)
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+  role                String    @default("USER")
+  active              Boolean   @default(true)
+  /// E-mail verificado pelo link de confirmação
+  emailVerified       Boolean   @default(false)
+  /// Token de verificação de e-mail (UUID hex)
+  emailVerifyToken    String?
+  /// Expiração do token (24h após geração)
+  emailVerifyTokenExp DateTime?
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
 
   @@index([username])
   @@index([email])
+  @@index([emailVerifyToken])
   @@map("site_users")
 }
 

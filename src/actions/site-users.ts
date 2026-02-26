@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { hashPassword } from "@/lib/password";
 import { getServerAuth } from "@/lib/auth";
+import { sendVerificationEmail } from "@/lib/email-verify";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
 
@@ -74,6 +75,7 @@ export async function getAdminSiteUsers(search?: string) {
       email: true,
       role: true,
       active: true,
+      emailVerified: true,
       createdAt: true,
     },
     orderBy: { createdAt: "desc" },
@@ -107,9 +109,14 @@ export async function createSiteUser(
 
   const passwordHash = await hashPassword(password);
 
-  await prisma.siteUser.create({
+  const newUser = await prisma.siteUser.create({
     data: { username, email, passwordHash, role },
   });
+
+  // Enviar email de verificação (loga no console se SMTP não configurado)
+  await sendVerificationEmail(newUser.id, email, username).catch((err) =>
+    console.error("Erro ao enviar email de verificação:", err)
+  );
 
   revalidatePath("/admin/users");
   return { success: true };
@@ -136,8 +143,42 @@ export async function updateSiteUser(
     data.passwordHash = await hashPassword(password);
   }
 
-  await prisma.siteUser.update({ where: { id }, data });
+  const oldUser = await prisma.siteUser.findUnique({
+    where: { id },
+    select: { email: true, username: true },
+  });
+
+  const updated = await prisma.siteUser.update({ where: { id }, data });
+
+  // Se o email mudou, enviar nova verificação
+  const newEmail = typeof rest.email === "string" ? rest.email : null;
+  if (newEmail && oldUser && newEmail !== oldUser.email) {
+    await sendVerificationEmail(id, newEmail, oldUser.username).catch((err) =>
+      console.error("Erro ao enviar email de verificação:", err)
+    );
+  }
+
+  void updated;
   revalidatePath("/admin/users");
+  return { success: true };
+}
+
+// ─── Resend verification email ────────────────────────────────────────────────
+
+export async function resendVerificationEmail(
+  id: string
+): Promise<{ success: boolean; error?: string }> {
+  await requireAdmin();
+
+  const user = await prisma.siteUser.findUnique({
+    where: { id },
+    select: { email: true, username: true, emailVerified: true },
+  });
+
+  if (!user) return { success: false, error: "Usuário não encontrado." };
+  if (user.emailVerified) return { success: false, error: "E-mail já verificado." };
+
+  await sendVerificationEmail(id, user.email, user.username);
   return { success: true };
 }
 

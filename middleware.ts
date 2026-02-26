@@ -27,7 +27,7 @@ const PUBLIC_PREFIXES = [
 ];
 
 // Rotas de auth (sem proteção)
-const AUTH_PATHS = ["/sign-in", "/sign-up", "/admin/login"];
+const AUTH_PATHS = ["/sign-in", "/sign-up", "/admin/login", "/verificar-email"];
 
 function isPublicPath(pathname: string): boolean {
   if (pathname === "/") return true;

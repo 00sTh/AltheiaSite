@@ -12,7 +12,7 @@ export default async function EditSiteUserPage({ params }: EditUserPageProps) {
   const { id } = await params;
   const user = await prisma.siteUser.findUnique({
     where: { id },
-    select: { id: true, username: true, email: true, role: true, active: true },
+    select: { id: true, username: true, email: true, role: true, active: true, emailVerified: true },
   });
 
   if (!user) notFound();

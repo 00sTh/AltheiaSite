@@ -2,8 +2,8 @@
 
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { Loader2, Eye, EyeOff, Trash2 } from "lucide-react";
-import { updateSiteUser, deleteSiteUser } from "@/actions/site-users";
+import { Loader2, Eye, EyeOff, Trash2, Send, MailCheck } from "lucide-react";
+import { updateSiteUser, deleteSiteUser, resendVerificationEmail } from "@/actions/site-users";
 
 const inputStyle: React.CSSProperties = {
   backgroundColor: "rgba(15,74,55,0.6)",
@@ -33,6 +33,7 @@ interface EditSiteUserFormProps {
     email: string;
     role: string;
     active: boolean;
+    emailVerified: boolean;
   };
 }
 
@@ -40,6 +41,8 @@ export function EditSiteUserForm({ user }: EditSiteUserFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [isDeleting, startDeleting] = useTransition();
+  const [isResending, startResending] = useTransition();
+  const [resendMsg, setResendMsg] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [showPass, setShowPass] = useState(false);
 
@@ -128,6 +131,53 @@ export function EditSiteUserForm({ user }: EditSiteUserFormProps) {
           <option value="ADMIN">Administrador — acessa o painel admin</option>
         </select>
       </div>
+
+      {/* Email verification status */}
+      <div
+        className="flex items-center justify-between rounded-xl px-4 py-3"
+        style={{
+          backgroundColor: "rgba(15,74,55,0.4)",
+          border: user.emailVerified
+            ? "1px solid rgba(34,197,94,0.2)"
+            : "1px solid rgba(224,82,82,0.2)",
+        }}
+      >
+        <div className="flex items-center gap-2">
+          {user.emailVerified ? (
+            <MailCheck className="h-4 w-4" style={{ color: "#22c55e" }} />
+          ) : (
+            <Send className="h-4 w-4" style={{ color: "#e05252" }} />
+          )}
+          <span className="text-sm" style={{ color: "#C8BBA8" }}>
+            {user.emailVerified ? "E-mail verificado" : "E-mail não verificado"}
+          </span>
+        </div>
+        {!user.emailVerified && (
+          <button
+            type="button"
+            disabled={isResending}
+            onClick={() => {
+              setResendMsg(null);
+              startResending(async () => {
+                const res = await resendVerificationEmail(user.id);
+                setResendMsg(
+                  res.success
+                    ? "Link reenviado! (verifique o console se SMTP não configurado)"
+                    : (res.error ?? "Erro ao reenviar.")
+                );
+              });
+            }}
+            className="flex items-center gap-1.5 text-xs font-medium disabled:opacity-50"
+            style={{ color: "#C9A227" }}
+          >
+            {isResending ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Send className="h-3.5 w-3.5" />}
+            Reenviar verificação
+          </button>
+        )}
+      </div>
+      {resendMsg && (
+        <p className="text-xs" style={{ color: "#C9A227" }}>{resendMsg}</p>
+      )}
 
       {/* Active */}
       <div className="flex items-center gap-3">

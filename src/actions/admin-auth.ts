@@ -9,7 +9,7 @@ const DEMO_MODE = process.env.DEMO_MODE === "true";
 /** Login do admin — verifica SiteUser com role ADMIN */
 export async function adminDemoLogin(
   formData: FormData
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string }> {
   if (!DEMO_MODE) {
     return { success: false, error: "Use o login Clerk em produção." };
   }
@@ -46,7 +46,7 @@ export async function adminDemoLogin(
 /** Login de usuário da loja — qualquer SiteUser ativo */
 export async function siteLogin(
   formData: FormData
-): Promise<{ success: boolean; error?: string }> {
+): Promise<{ success: boolean; error?: string; warning?: string }> {
   if (!DEMO_MODE) {
     return { success: false, error: "Use o login Clerk em produção." };
   }
@@ -63,7 +63,7 @@ export async function siteLogin(
       OR: [{ username }, { email: username }],
       active: true,
     },
-    select: { id: true, passwordHash: true },
+    select: { id: true, passwordHash: true, emailVerified: true },
   });
 
   if (!user) {
@@ -76,6 +76,11 @@ export async function siteLogin(
   }
 
   await setSession(user.id);
+
+  if (!user.emailVerified) {
+    return { success: true, warning: "E-mail ainda não confirmado. Verifique sua caixa de entrada." };
+  }
+
   return { success: true };
 }
 
