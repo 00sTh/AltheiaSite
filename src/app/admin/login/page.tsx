@@ -2,14 +2,14 @@ import { redirect } from "next/navigation";
 import { APP_NAME } from "@/lib/constants";
 import { AdminLoginForm } from "@/components/admin/admin-login-form";
 
-const DEMO_MODE = process.env.DEMO_MODE === "true";
-
 export const metadata = {
   title: `Admin — ${APP_NAME}`,
   robots: { index: false },
 };
 
 export default async function AdminLoginPage() {
+  const DEMO_MODE = process.env.DEMO_MODE === "true";
+
   // Em produção (Clerk), redirecionar para /sign-in com callback
   if (!DEMO_MODE) {
     redirect("/sign-in?redirect_url=/admin");
@@ -65,27 +65,6 @@ export default async function AdminLoginPage() {
               }}
             />
           </div>
-
-          {/* Demo credentials hint */}
-          {DEMO_MODE && (
-            <div
-              className="rounded-xl px-4 py-3 mb-6 text-xs"
-              style={{
-                backgroundColor: "rgba(201,162,39,0.07)",
-                border: "1px solid rgba(201,162,39,0.2)",
-                color: "rgba(200,187,168,0.7)",
-              }}
-            >
-              <p className="font-semibold mb-0.5" style={{ color: "#C9A227" }}>
-                Modo Demo
-              </p>
-              <p>
-                Usuário: <code className="font-mono">admin</code>
-                &nbsp;·&nbsp;
-                Senha: <code className="font-mono">altheia2024</code>
-              </p>
-            </div>
-          )}
 
           <AdminLoginForm />
 

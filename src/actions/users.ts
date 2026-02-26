@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getServerAuth } from "@/lib/auth";
+import { getServerAuth, DEMO_USER_ID } from "@/lib/auth";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
 
@@ -22,30 +22,32 @@ export async function getAdminUsers(search?: string) {
   const isPostgres = (process.env.DATABASE_URL ?? "").startsWith("postgres");
 
   const users = await prisma.userProfile.findMany({
-    where: search
-      ? {
-          OR: [
-            {
-              email: {
-                contains: search,
-                ...(isPostgres && { mode: "insensitive" as const }),
-              },
+    where: {
+      // Excluir usuário demo do painel
+      clerkId: { not: DEMO_USER_ID },
+      ...(search && {
+        OR: [
+          {
+            email: {
+              contains: search,
+              ...(isPostgres && { mode: "insensitive" as const }),
             },
-            {
-              firstName: {
-                contains: search,
-                ...(isPostgres && { mode: "insensitive" as const }),
-              },
+          },
+          {
+            firstName: {
+              contains: search,
+              ...(isPostgres && { mode: "insensitive" as const }),
             },
-            {
-              lastName: {
-                contains: search,
-                ...(isPostgres && { mode: "insensitive" as const }),
-              },
+          },
+          {
+            lastName: {
+              contains: search,
+              ...(isPostgres && { mode: "insensitive" as const }),
             },
-          ],
-        }
-      : undefined,
+          },
+        ],
+      }),
+    },
     include: {
       _count: { select: { orders: true } },
       orders: {

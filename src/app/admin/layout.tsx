@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation";
 import Link from "next/link";
 import { getServerAuth } from "@/lib/auth";
-import { AdminLogoutButton } from "@/components/admin/admin-logout-button";
 import {
   LayoutDashboard,
   Package,
@@ -88,17 +87,14 @@ export default async function AdminLayout({
           ))}
         </nav>
 
-        {/* Bottom links */}
-        <div className="mt-4 space-y-1">
-          <Link
-            href="/"
-            className="flex items-center gap-2 px-3 py-2 text-xs rounded-lg"
-            style={{ color: "rgba(200,187,168,0.5)" }}
-          >
-            ← Ver site
-          </Link>
-          <AdminLogoutButton />
-        </div>
+        {/* Bottom link */}
+        <Link
+          href="/"
+          className="flex items-center gap-2 px-3 py-2 text-xs mt-4 rounded-lg"
+          style={{ color: "rgba(200,187,168,0.5)" }}
+        >
+          ← Ver site
+        </Link>
       </aside>
 
       {/* Main content */}
