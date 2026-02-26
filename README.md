@@ -1,193 +1,334 @@
-# Altheia — E-commerce de Cosméticos
+# Altheia — Plataforma de E-commerce de Luxo
 
-> Plataforma de e-commerce construída com Next.js 16, Clerk, Stripe e Prisma.
+> *A Verdade da Beleza* — Cosméticos de luxo, construído com Next.js 16 + Prisma + Clerk + Stripe
+
+---
 
 ## Stack
 
-- **Next.js 16** — App Router, Server Components, Server Actions
-- **TypeScript** — strict mode
-- **Tailwind CSS v4** + **shadcn/ui** + **Radix UI** + **lucide-react**
-- **Prisma** + **PostgreSQL** (Neon)
-- **Clerk** — autenticação completa
-- **Stripe** — checkout + webhook
-- **Zod** — validação de dados
+| Tecnologia | Versão | Propósito |
+|---|---|---|
+| Next.js | ^16 | App Router + Server Components |
+| TypeScript | strict | Linguagem |
+| Tailwind CSS | v4 | Estilo (Emerald + Gold) |
+| Prisma | ^6 | ORM |
+| SQLite (dev) / PostgreSQL Neon (prod) | — | Banco de dados |
+| Clerk | ^6 | Autenticação |
+| Stripe | ^17 | Pagamentos |
+| Framer Motion | ^11 | Animações |
+| Vercel | — | Hospedagem |
 
 ---
 
-## Pré-requisitos
-
-- Node.js 20+ (recomendado via [nvm](https://github.com/nvm-sh/nvm))
-- Conta no [Neon](https://neon.tech) (PostgreSQL serverless gratuito)
-- Conta no [Clerk](https://clerk.com) (plano gratuito)
-- Conta no [Stripe](https://stripe.com) (modo test)
-
----
-
-## Instalação passo a passo
-
-### 1. Clone e instale dependências
+## Rodando localmente (DEMO_MODE)
 
 ```bash
-git clone git@github.com:00sTh/AltheiaSite.git
-cd AltheiaSite
+# 1. Instalar dependências
 npm install
-```
 
-### 2. Configure as variáveis de ambiente
+# 2. Manter DEMO_MODE=true no .env.local (sem Clerk/Stripe reais)
+# O arquivo já está configurado para dev local
 
-```bash
-cp .env.example .env.local
-```
+# 3. Sincronizar banco de dados
+npx prisma db push
 
-Edite `.env.local` com suas credenciais (veja seção abaixo).
+# 4. Popular banco com produtos de exemplo
+npx tsx prisma/seed.ts
 
-### 3. Configure o banco de dados
-
-```bash
-# Gera o Prisma Client
-npm run db:generate
-
-# Aplica o schema no banco (dev)
-npm run db:push
-
-# Popula com dados de exemplo
-npm run db:seed
-```
-
-### 4. Inicie o servidor de desenvolvimento
-
-```bash
+# 5. Rodar
 npm run dev
 ```
 
-Acesse [http://localhost:3000](http://localhost:3000).
+Abrir http://localhost:3000
+
+Em DEMO_MODE, o usuário `demo@altheia.com` tem role `admin` e acessa `/admin` diretamente.
 
 ---
 
-## Variáveis de Ambiente
-
-| Variável | Onde obter | Obrigatória |
-|---|---|---|
-| `DATABASE_URL` | Neon > Connection string (pooled) | ✅ |
-| `DIRECT_URL` | Neon > Connection string (direto) | ✅ |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk Dashboard > API Keys | ✅ |
-| `CLERK_SECRET_KEY` | Clerk Dashboard > API Keys | ✅ |
-| `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` | Stripe > Developers > API Keys | ✅ |
-| `STRIPE_SECRET_KEY` | Stripe > Developers > API Keys | ✅ |
-| `STRIPE_WEBHOOK_SECRET` | Stripe > Developers > Webhooks | ✅ em prod |
-| `NEXT_PUBLIC_APP_URL` | URL da aplicação | ✅ em prod |
-
-### Configuração Clerk
-
-No [painel do Clerk](https://dashboard.clerk.com):
-
-1. Crie uma nova aplicação
-2. Em **User & Authentication > Email, Phone, Username**, habilite email
-3. Em **Paths**, configure:
-   - Sign-in URL: `/sign-in`
-   - Sign-up URL: `/sign-up`
-   - After sign-in: `/`
-   - After sign-up: `/`
-
-### Configuração Stripe (webhook local)
-
-```bash
-# Instale o Stripe CLI
-# https://stripe.com/docs/stripe-cli
-
-stripe login
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
-```
-
-Copie o `whsec_...` exibido para `STRIPE_WEBHOOK_SECRET` no `.env.local`.
-
----
-
-## Scripts disponíveis
-
-```bash
-npm run dev          # Servidor de desenvolvimento (Turbopack)
-npm run build        # Build de produção
-npm run start        # Inicia o servidor de produção
-npm run type-check   # Verifica tipos TypeScript
-npm run db:push      # Aplica schema no banco (sem migration)
-npm run db:migrate   # Cria e aplica migration
-npm run db:seed      # Popula banco com dados de exemplo
-npm run db:studio    # Abre Prisma Studio (interface visual do banco)
-npm run db:reset     # Reseta o banco e reaplica migrations
-```
-
----
-
-## Estrutura do projeto
+## Estrutura do Projeto
 
 ```
-AltheiaSite/
-├── prisma/
-│   ├── schema.prisma          # Modelos do banco
-│   └── seed.ts                # Dados iniciais (3 categorias + 10 produtos)
-├── src/
-│   ├── actions/               # Server Actions (cart, products)
-│   ├── app/
-│   │   ├── (auth)/            # Páginas Clerk (sign-in, sign-up)
-│   │   ├── (store)/           # Loja pública (home, products, cart, checkout)
-│   │   ├── account/           # Área do cliente
-│   │   ├── admin/             # Dashboard administrativo
-│   │   └── api/webhooks/      # Webhook Stripe
-│   ├── components/
-│   │   ├── ui/                # shadcn/ui (button, card, badge, input)
-│   │   ├── layout/            # Navbar, Footer, ThemeToggle
-│   │   ├── products/          # ProductCard, ProductFilters
-│   │   ├── cart/              # AddToCartButton, CartItemCard
-│   │   └── checkout/          # CheckoutForm
-│   ├── lib/                   # prisma.ts, stripe.ts, utils.ts, constants.ts
-│   ├── schemas/               # Schemas Zod
-│   └── types/                 # Tipos TypeScript compostos
-└── middleware.ts               # Proteção de rotas com Clerk
+src/
+  app/
+    (store)/              ← Loja pública (Navbar + Footer)
+      page.tsx            ← Home (dinâmico via SiteSettings)
+      products/           ← Catálogo e detalhe
+      cart/               ← Carrinho
+      checkout/           ← Checkout Stripe
+      wishlist/           ← Lista de desejos
+      sobre-nos/          ← Sobre Nós (dinâmico via SiteSettings)
+      videos/             ← Vídeos (dinâmico via SiteSettings)
+      politica-de-privacidade/  ← LGPD
+      termos-de-uso/      ← LGPD
+    admin/                ← Painel administrativo (role=admin)
+      page.tsx            ← Dashboard com métricas
+      products/           ← CRUD de produtos + upload de imagens
+      orders/             ← Gestão de pedidos + atualizar status
+      settings/           ← SiteSettings (conteúdo dinâmico)
+      newsletter/         ← Lista de inscritos
+    api/
+      newsletter/         ← POST /api/newsletter
+      webhooks/stripe/    ← Webhook Stripe (pago → status PAID)
+    sitemap.ts            ← Sitemap dinâmico gerado automaticamente
+    robots.ts             ← robots.txt
+  actions/
+    cart.ts               ← Server Actions do carrinho
+    products.ts           ← Queries de produtos/categorias
+    admin.ts              ← CRUD admin + SiteSettings
+    wishlist.ts           ← Lista de desejos
+  components/
+    home/                 ← Hero, BestSellers, Lumina, Historia, WhyAltheia
+    admin/                ← ProductForm, OrderStatusForm, SiteSettingsForm
+    about/                ← SobreNosContent (client)
+    videos/               ← VideosContent (client, embed YouTube)
+    layout/               ← Navbar, Footer, MobileNav, NewsletterForm
+    products/             ← ProductCard, ProductFilters, WishlistButton
+    ui/                   ← GoldButton, SectionTitle, ProductImage
+  lib/
+    auth.ts               ← Abstração Clerk (+ DEMO_MODE)
+    prisma.ts             ← Singleton + parseImages
+    blob.ts               ← Upload de imagens (Vercel Blob)
+    constants.ts          ← APP_NAME, ORDER_STATUS, etc.
+    animations.ts         ← Framer Motion variants
+prisma/
+  schema.prisma           ← Modelos completos (ver abaixo)
+  seed.ts                 ← 3 categorias + 10 produtos
 ```
 
 ---
 
-## Acesso Admin
+## Modelos Prisma
 
-Para tornar um usuário administrador:
+| Modelo | Propósito |
+|---|---|
+| `UserProfile` | Extensão do usuário Clerk |
+| `Category` | Categorias com hierarquia |
+| `Product` | Produtos com imagens, preço, estoque |
+| `Cart` + `CartItem` | Carrinho persistido no banco |
+| `Order` + `OrderItem` | Pedidos com snapshot de preço |
+| `Wishlist` + `WishlistItem` | Lista de desejos por usuário |
+| `SiteSettings` | Singleton com conteúdo dinâmico das páginas |
+| `NewsletterSubscriber` | Inscritos na newsletter |
 
-1. No [painel do Clerk](https://dashboard.clerk.com), vá em **Users**
-2. Clique no usuário desejado
-3. Em **Metadata > Public metadata**, adicione:
-   ```json
-   { "role": "admin" }
-   ```
-4. O usuário agora pode acessar `/admin`
+---
+
+## Admin Panel
+
+Acesse `/admin` (requer `sessionClaims.metadata.role === "admin"`).
+
+**Para promover a admin no Clerk:**
+Clerk Dashboard → Users → usuário → Metadata: `{ "role": "admin" }`
+
+| Rota | Função |
+|---|---|
+| `/admin` | Dashboard: produtos, pedidos, receita, clientes |
+| `/admin/products` | Listar todos com thumbnail, preço, estoque, status |
+| `/admin/products/new` | Criar produto (form + upload de imagem) |
+| `/admin/products/[id]/edit` | Editar produto |
+| `/admin/orders` | Listar com paginação |
+| `/admin/orders/[id]` | Detalhe + atualizar status do pedido |
+| `/admin/settings` | Editar todos os textos/imagens do site |
+| `/admin/newsletter` | Visualizar inscritos |
+
+---
+
+## SiteSettings — Conteúdo Dinâmico
+
+A tabela `site_settings` (singleton `id="default"`) controla o conteúdo editável.
+Edite em `/admin/settings`.
+
+| Campo | Onde aparece |
+|---|---|
+| `heroTitle`, `heroSubtitle` | Home — Hero |
+| `heroImageUrl` / `heroVideoUrl` | Home — Hero background |
+| `aboutTitle`, `aboutText` | Página Sobre Nós |
+| `featuredVideoUrl` | Vídeos (embed YouTube automático) |
+| `featuredVideoTitle`, `featuredVideoDesc` | Vídeos |
+| `instagramUrl`, `youtubeUrl`, `twitterUrl` | Footer |
+| `newsletterTitle`, `newsletterSubtitle` | Footer |
+| `metaTitle`, `metaDescription` | SEO global (head) |
+| `shippingFreeThreshold` | Threshold frete grátis |
 
 ---
 
 ## Deploy na Vercel
 
-1. Faça push do código para o GitHub
-2. Importe o repositório na [Vercel](https://vercel.com)
-3. Configure todas as variáveis de ambiente (`.env.example` como referência)
-4. Em **Settings > Functions**, configure a região mais próxima do banco Neon
-5. Configure o webhook Stripe com a URL de produção:
-   ```
-   https://seu-dominio.vercel.app/api/webhooks/stripe
-   ```
+### 1. Preparar repositório
+
+```bash
+git init && git add . && git commit -m "feat: Altheia e-commerce"
+git remote add origin https://github.com/SEU_USUARIO/altheia-site.git
+git push -u origin main
+```
+
+### 2. Criar projeto na Vercel
+
+1. https://vercel.com/new → Import Git Repository
+2. Framework: **Next.js** (detectado automaticamente)
+3. Build Command: `npm run build`
+4. Output Directory: `.next`
+
+### 3. Variáveis de Ambiente (Vercel → Settings → Environment Variables)
+
+```env
+# Banco — Neon PostgreSQL
+DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/altheia?sslmode=require&pgbouncer=true
+DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/altheia?sslmode=require
+
+# Clerk (produção)
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
+CLERK_SECRET_KEY=sk_live_...
+NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
+NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
+NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
+NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
+
+# Stripe (produção)
+NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
+STRIPE_SECRET_KEY=sk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+
+# App
+NEXT_PUBLIC_APP_URL=https://altheia.com.br
+
+# Vercel Blob (upload de imagens)
+BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
+```
+
+> ⚠️ **NÃO incluir** `DEMO_MODE=true` em produção.
+
+### 4. Banco de dados — Neon PostgreSQL
+
+1. Criar conta em https://neon.tech
+2. New Project → copiar Connection Strings
+
+**Atualizar `prisma/schema.prisma` para produção:**
+
+```prisma
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model Product {
+  price  Decimal @db.Decimal(10, 2)  // era Float
+  images String[]                     // era String (JSON)
+}
+
+enum OrderStatus {
+  PENDING PAID SHIPPED DELIVERED CANCELLED
+}
+
+model Order {
+  status OrderStatus @default(PENDING)  // era String
+}
+```
+
+**Aplicar migration:**
+```bash
+DATABASE_URL="..." DIRECT_URL="..." npx prisma migrate deploy
+npx tsx prisma/seed.ts   # opcional: dados de exemplo
+```
+
+### 5. Vercel Blob (imagens de produtos)
+
+1. Vercel Dashboard → Storage → Create Store → Blob
+2. Conectar ao projeto
+3. Copiar `BLOB_READ_WRITE_TOKEN`
+4. Descomentar código em `src/lib/blob.ts` (substituir placeholder)
+
+### 6. Stripe Webhook (produção)
+
+1. Stripe Dashboard → Developers → Webhooks → Add Endpoint
+2. URL: `https://altheia.com.br/api/webhooks/stripe`
+3. Eventos: `payment_intent.succeeded`, `payment_intent.payment_failed`
+4. Copiar signing secret para `STRIPE_WEBHOOK_SECRET`
 
 ---
 
-## Próximos passos
+## DNS — Network Solutions para domínio altheia.com.br
 
-- [ ] **Admin - Produtos**: CRUD completo com upload de imagens (Vercel Blob)
-- [ ] **Admin - Pedidos**: Atualizar status, exportar CSV
-- [ ] **Checkout**: Integrar `@stripe/react-stripe-js` com `PaymentElement`
-- [ ] **Webhook**: Decrementar estoque + enviar e-mail de confirmação
-- [ ] **Busca**: Pesquisa full-text com `pg_trgm` ou Algolia
-- [ ] **Reviews**: Sistema de avaliações de produtos
-- [ ] **Wishlist**: Lista de desejos por usuário
-- [ ] **Analytics**: Dashboard com métricas de vendas
+### Configuração DNS para Vercel
+
+**Passo 1 — Adicionar domínio na Vercel:**
+Vercel Dashboard → Settings → Domains → Add Domain → `altheia.com.br`
+
+Vercel retornará os valores DNS necessários. Geralmente:
+
+| Tipo | Host | Valor | TTL |
+|---|---|---|---|
+| `A` | `@` (raiz) | `76.76.21.21` | 3600 |
+| `CNAME` | `www` | `cname.vercel-dns.com` | 3600 |
+
+**Passo 2 — Configurar no Network Solutions:**
+
+1. Login em https://www.networksolutions.com
+2. **My Account → Domain Names → Manage**
+3. Selecionar `altheia.com.br`
+4. **Change Where Domain Points → Advanced DNS**
+5. Apagar registros A e CNAME existentes
+6. Adicionar os registros da tabela acima
+7. Salvar alterações
+
+**Passo 3 — Verificar propagação:**
+```bash
+# Aguardar 30 min a 24h, depois verificar:
+dig altheia.com.br A         # deve retornar 76.76.21.21
+dig www.altheia.com.br CNAME # deve retornar cname.vercel-dns.com
+```
+
+**Passo 4 — SSL automático:**
+Vercel provisiona certificado Let's Encrypt automaticamente após validação DNS.
+
+> **Nota sobre DNSSEC:** Se o domínio usar DNSSEC, pode ser necessário desabilitar temporariamente durante a migração de nameservers.
+
+---
+
+## Checklist de Produção
+
+- [ ] `DEMO_MODE` removido das env vars
+- [ ] Schema Prisma atualizado para PostgreSQL
+- [ ] Migration aplicada no Neon
+- [ ] Domínio configurado (DNS + SSL)
+- [ ] Clerk configurado com domínio de produção
+- [ ] Stripe webhook configurado com URL de produção
+- [ ] Vercel Blob configurado para upload de imagens
+- [ ] Admin: promover usuário real com `role: "admin"`
+- [ ] Admin → Settings: preencher conteúdo inicial do SiteSettings
+- [ ] Testar fluxo completo: cadastro → produto → carrinho → checkout → pedido
+
+---
+
+## Scripts Úteis
+
+```bash
+npm run dev          # Servidor de desenvolvimento
+npm run build        # Build de produção
+npm run type-check   # Verificar tipos TypeScript
+npx prisma studio    # Interface visual do banco
+npx prisma db push   # Sincronizar schema (dev)
+npx prisma migrate deploy  # Migration (produção)
+npx tsx prisma/seed.ts     # Popular banco
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
+
+---
+
+## Paleta de Cores
+
+| Cor | Hex | Uso |
+|---|---|---|
+| Verde esmeralda profundo | `#0A3D2F` | Fundo principal |
+| Verde esmeralda médio | `#0F4A37` | Cards, seções |
+| Verde esmeralda claro | `#145A43` | Hover, fundo imagens |
+| Ouro | `#C9A227` | Accent primário, preços |
+| Ouro claro | `#E8C84A` | Hover de botões |
+| Creme | `#F5F0E6` | Texto principal |
+| Creme escuro | `#C8BBA8` | Texto secundário |
 
 ---
 
 ## Licença
 
-Privado — todos os direitos reservados à Altheia.
+Projeto proprietário — © 2026 Altheia Cosméticos Ltda. Todos os direitos reservados.

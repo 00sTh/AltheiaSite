@@ -12,8 +12,8 @@ const config: Config = {
     "./src/components/**/*.{js,ts,jsx,tsx,mdx}",
     "./src/app/**/*.{js,ts,jsx,tsx,mdx}",
   ],
-  // dark mode controlado pela classe (next-themes adiciona class="dark")
-  darkMode: ["class"],
+  // dark mode — Tailwind v4 usa "class" como string simples
+  darkMode: "class",
   theme: {
     extend: {
       // Cores mapeadas às CSS variables definidas no globals.css

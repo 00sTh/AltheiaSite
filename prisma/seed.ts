@@ -180,10 +180,12 @@ async function main() {
   ];
 
   for (const produto of produtos) {
+    // SQLite: images é String (JSON). PostgreSQL: String[] nativo
+    const { images, ...rest } = produto as typeof produto & { images: string[] };
     await prisma.product.upsert({
-      where: { slug: produto.slug },
+      where: { slug: rest.slug },
       update: {},
-      create: produto,
+      create: { ...rest, images: JSON.stringify(images) },
     });
     console.log(`  📦 ${produto.name}`);
   }

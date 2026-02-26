@@ -1,11 +1,11 @@
 "use client";
 
-import Image from "next/image";
+import { ProductImage } from "@/components/ui/product-image";
 import { Minus, Plus, Trash2 } from "lucide-react";
 import { useTransition } from "react";
-import { Button } from "@/components/ui/button";
 import { updateQuantity, removeFromCart } from "@/actions/cart";
 import { formatPrice } from "@/lib/utils";
+import { parseImages } from "@/lib/prisma";
 import type { CartItemWithProduct } from "@/types";
 
 interface CartItemCardProps {
@@ -14,7 +14,8 @@ interface CartItemCardProps {
 
 export function CartItemCard({ item }: CartItemCardProps) {
   const [isPending, startTransition] = useTransition();
-  const mainImage = item.product.images[0] ?? "/placeholder.svg";
+  const images = parseImages(item.product.images as unknown as string);
+  const mainImage = images[0] ?? "/placeholder.svg";
 
   function handleUpdate(newQty: number) {
     startTransition(() =>
@@ -28,13 +29,16 @@ export function CartItemCard({ item }: CartItemCardProps) {
 
   return (
     <div
-      className={`flex gap-4 py-4 border-b last:border-0 transition-opacity ${
+      className={`flex gap-4 p-4 transition-opacity ${
         isPending ? "opacity-50" : ""
       }`}
     >
-      {/* Imagem */}
-      <div className="relative h-20 w-20 shrink-0 overflow-hidden rounded-md bg-muted">
-        <Image
+      {/* Image */}
+      <div
+        className="relative h-20 w-20 shrink-0 overflow-hidden rounded-xl"
+        style={{ backgroundColor: "#145A43" }}
+      >
+        <ProductImage
           src={mainImage}
           alt={item.product.name}
           fill
@@ -42,56 +46,73 @@ export function CartItemCard({ item }: CartItemCardProps) {
         />
       </div>
 
-      {/* Detalhes */}
+      {/* Details */}
       <div className="flex flex-1 flex-col gap-1">
-        <p className="font-medium text-sm leading-tight">{item.product.name}</p>
-        <p className="text-primary font-semibold">
+        <p
+          className="font-serif font-semibold text-sm leading-tight"
+          style={{ color: "#F5F0E6" }}
+        >
+          {item.product.name}
+        </p>
+        <p
+          className="font-bold text-sm"
+          style={{ color: "#C9A227" }}
+        >
           {formatPrice(Number(item.product.price))}
         </p>
 
-        {/* Quantidade */}
+        {/* Quantity controls */}
         <div className="flex items-center gap-2 mt-auto">
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
+          <button
+            className="h-7 w-7 flex items-center justify-center rounded-full transition-all duration-200 disabled:opacity-40"
+            style={{
+              border: "1px solid rgba(201,162,39,0.3)",
+              color: "#C9A227",
+            }}
             onClick={() => handleUpdate(item.quantity - 1)}
             disabled={isPending}
             aria-label="Diminuir quantidade"
           >
             <Minus className="h-3 w-3" />
-          </Button>
+          </button>
 
-          <span className="w-6 text-center text-sm font-medium">
+          <span
+            className="w-6 text-center text-sm font-bold"
+            style={{ color: "#F5F0E6" }}
+          >
             {item.quantity}
           </span>
 
-          <Button
-            variant="outline"
-            size="icon"
-            className="h-7 w-7"
+          <button
+            className="h-7 w-7 flex items-center justify-center rounded-full transition-all duration-200 disabled:opacity-40"
+            style={{
+              border: "1px solid rgba(201,162,39,0.3)",
+              color: "#C9A227",
+            }}
             onClick={() => handleUpdate(item.quantity + 1)}
             disabled={isPending || item.quantity >= item.product.stock}
             aria-label="Aumentar quantidade"
           >
             <Plus className="h-3 w-3" />
-          </Button>
+          </button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-7 w-7 ml-2 text-destructive hover:text-destructive"
+          <button
+            className="h-7 w-7 flex items-center justify-center rounded-full ml-2 transition-all duration-200 hover:bg-red-500/20 disabled:opacity-40"
+            style={{ color: "rgba(224,82,82,0.7)" }}
             onClick={handleRemove}
             disabled={isPending}
             aria-label="Remover item"
           >
             <Trash2 className="h-3 w-3" />
-          </Button>
+          </button>
         </div>
       </div>
 
       {/* Subtotal */}
-      <p className="font-semibold text-sm shrink-0">
+      <p
+        className="font-bold text-sm shrink-0 self-center"
+        style={{ color: "#C9A227" }}
+      >
         {formatPrice(Number(item.product.price) * item.quantity)}
       </p>
     </div>

@@ -1,9 +1,10 @@
 "use server";
 
-import { auth } from "@clerk/nextjs/server";
+import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { getServerAuth } from "@/lib/auth";
 import {
   addToCartSchema,
   updateQuantitySchema,
@@ -12,10 +13,9 @@ import {
 import type { CartWithItems } from "@/types";
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Helpers internos
+// Helper interno
 // ─────────────────────────────────────────────────────────────────────────────
 
-/** Busca ou cria o carrinho do usuário autenticado */
 async function getOrCreateCart(clerkId: string) {
   let cart = await prisma.cart.findUnique({
     where: { clerkId },
@@ -23,7 +23,6 @@ async function getOrCreateCart(clerkId: string) {
   });
 
   if (!cart) {
-    // Tenta vincular ao perfil caso já exista
     const profile = await prisma.userProfile.findUnique({
       where: { clerkId },
       select: { id: true },
@@ -35,36 +34,29 @@ async function getOrCreateCart(clerkId: string) {
     });
   }
 
-  return cart as CartWithItems;
+  return cart as unknown as CartWithItems;
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Actions públicas
 // ─────────────────────────────────────────────────────────────────────────────
 
-/**
- * Retorna o carrinho do usuário autenticado.
- * Retorna null se não estiver logado.
- */
+/** Retorna o carrinho do usuário autenticado */
 export async function getCart(): Promise<CartWithItems | null> {
-  const { userId } = await auth();
+  const { userId } = await getServerAuth();
   if (!userId) return null;
   return getOrCreateCart(userId);
 }
 
-/**
- * Adiciona um produto ao carrinho.
- * Se já existir, incrementa a quantidade.
- */
+/** Adiciona produto ao carrinho (banco ou localStorage para guest) */
 export async function addToCart(
   data: z.infer<typeof addToCartSchema>
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Usuário não autenticado");
+  const { userId } = await getServerAuth();
+  if (!userId) redirect("/sign-in");
 
   const { productId, quantity } = addToCartSchema.parse(data);
 
-  // Verifica estoque antes de adicionar
   const product = await prisma.product.findUnique({
     where: { id: productId, active: true },
     select: { stock: true, name: true },
@@ -84,7 +76,6 @@ export async function addToCart(
     const newQty = existing.quantity + quantity;
     if (newQty > product.stock)
       throw new Error(`Estoque insuficiente para "${product.name}"`);
-
     await prisma.cartItem.update({
       where: { id: existing.id },
       data: { quantity: newQty },
@@ -99,15 +90,12 @@ export async function addToCart(
   revalidatePath("/", "layout");
 }
 
-/**
- * Atualiza a quantidade de um item.
- * Quantity = 0 remove o item.
- */
+/** Atualiza quantidade de um item (0 = remove) */
 export async function updateQuantity(
   data: z.infer<typeof updateQuantitySchema>
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Usuário não autenticado");
+  const { userId } = await getServerAuth();
+  if (!userId) throw new Error("Não autenticado");
 
   const { cartItemId, quantity } = updateQuantitySchema.parse(data);
 
@@ -116,36 +104,28 @@ export async function updateQuantity(
     return;
   }
 
-  await prisma.cartItem.update({
-    where: { id: cartItemId },
-    data: { quantity },
-  });
-
+  await prisma.cartItem.update({ where: { id: cartItemId }, data: { quantity } });
   revalidatePath("/cart");
 }
 
-/** Remove um item específico do carrinho */
+/** Remove item do carrinho */
 export async function removeFromCart(
   data: z.infer<typeof removeFromCartSchema>
 ): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Usuário não autenticado");
+  const { userId } = await getServerAuth();
+  if (!userId) throw new Error("Não autenticado");
 
   const { cartItemId } = removeFromCartSchema.parse(data);
-
   await prisma.cartItem.delete({ where: { id: cartItemId } });
 
   revalidatePath("/cart");
   revalidatePath("/", "layout");
 }
 
-/**
- * Limpa todo o carrinho.
- * Chamada internamente após checkout bem-sucedido.
- */
+/** Limpa o carrinho inteiro (pós-checkout) */
 export async function clearCart(): Promise<void> {
-  const { userId } = await auth();
-  if (!userId) throw new Error("Usuário não autenticado");
+  const { userId } = await getServerAuth();
+  if (!userId) throw new Error("Não autenticado");
 
   const cart = await prisma.cart.findUnique({
     where: { clerkId: userId },

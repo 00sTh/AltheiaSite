@@ -1,6 +1,7 @@
 export const APP_NAME = "Altheia";
+export const APP_TAGLINE = "A Verdade da Beleza";
 export const APP_DESCRIPTION =
-  "Cosméticos premium para realçar sua beleza natural.";
+  "Cosméticos de luxo formulados com ingredientes raros para revelar a luminosidade natural da sua pele.";
 export const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
 /** Número de produtos por página na listagem */

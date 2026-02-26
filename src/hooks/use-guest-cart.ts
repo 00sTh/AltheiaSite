@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { useUser } from "@clerk/nextjs";
+import { useAuth } from "@/context/auth";
 import { addToCart } from "@/actions/cart";
 
 const GUEST_CART_KEY = "altheia:guest-cart";
@@ -11,7 +11,6 @@ export interface GuestCartItem {
   quantity: number;
 }
 
-/** Lê o carrinho guest do localStorage */
 export function getGuestCart(): GuestCartItem[] {
   if (typeof window === "undefined") return [];
   try {
@@ -22,12 +21,10 @@ export function getGuestCart(): GuestCartItem[] {
   }
 }
 
-/** Salva o carrinho guest no localStorage */
 export function setGuestCart(items: GuestCartItem[]): void {
   localStorage.setItem(GUEST_CART_KEY, JSON.stringify(items));
 }
 
-/** Adiciona (ou incrementa) um item no carrinho guest */
 export function addToGuestCart(productId: string, quantity = 1): void {
   const items = getGuestCart();
   const existing = items.find((i) => i.productId === productId);
@@ -39,51 +36,29 @@ export function addToGuestCart(productId: string, quantity = 1): void {
   setGuestCart(items);
 }
 
-/** Remove o carrinho guest do localStorage */
 export function clearGuestCart(): void {
   localStorage.removeItem(GUEST_CART_KEY);
 }
 
-/**
- * Hook que sincroniza o carrinho guest (localStorage) com o banco
- * quando o usuário faz login.
- *
- * Uso: inserir em um Client Component no layout da loja.
- *
- * @example
- * // src/components/layout/guest-cart-sync.tsx
- * "use client";
- * import { useGuestCartSync } from "@/hooks/use-guest-cart";
- * export function GuestCartSync() {
- *   useGuestCartSync();
- *   return null;
- * }
- */
+/** Hook: sincroniza carrinho guest → banco ao fazer login */
 export function useGuestCartSync(): void {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
 
   useEffect(() => {
-    // Aguarda o Clerk carregar o estado de autenticação
-    if (!isLoaded) return;
-    // Só sincroniza quando acabou de logar
-    if (!isSignedIn) return;
+    if (!isLoaded || !isSignedIn) return;
 
     const guestItems = getGuestCart();
     if (guestItems.length === 0) return;
 
-    // Migra cada item do localStorage para o banco
     async function syncToDatabase() {
       for (const item of guestItems) {
         try {
           await addToCart({ productId: item.productId, quantity: item.quantity });
         } catch (err) {
-          // Ignora erros individuais (ex: produto esgotado)
           console.warn(`[guest-cart] falha ao migrar produto ${item.productId}:`, err);
         }
       }
-      // Limpa o carrinho guest após migração bem-sucedida
       clearGuestCart();
-      console.log(`[guest-cart] ${guestItems.length} item(s) migrado(s) para o banco`);
     }
 
     void syncToDatabase();

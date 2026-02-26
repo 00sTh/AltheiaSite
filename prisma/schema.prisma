@@ -2,16 +2,20 @@ generator client {
   provider = "prisma-client-js"
 }
 
+// ============================================================
+// ATENÇÃO: SQLite para desenvolvimento local (DEMO_MODE)
+// Para produção com Neon/PostgreSQL:
+//   - Trocar provider para "postgresql"
+//   - Adicionar directUrl = env("DIRECT_URL")
+//   - Trocar price Float → Decimal @db.Decimal(10, 2)
+//   - Trocar images String → String[]
+//   - Restaurar enum OrderStatus { ... }
+// ============================================================
 datasource db {
-  provider  = "postgresql"
-  url       = env("DATABASE_URL")
-  directUrl = env("DIRECT_URL")
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
-// ============================================================
-// USER PROFILE — extensão do usuário Clerk
-// O Clerk gerencia a senha/sessão; aqui ficam dados do negócio
-// ============================================================
 model UserProfile {
   id        String   @id @default(uuid())
   clerkId   String   @unique
@@ -29,16 +33,12 @@ model UserProfile {
   @@map("user_profiles")
 }
 
-// ============================================================
-// CATEGORIA — suporta hierarquia (subcategorias via parentId)
-// ============================================================
 model Category {
   id       String  @id @default(uuid())
   name     String
   slug     String  @unique
   imageUrl String?
 
-  // Auto-relação para subcategorias
   parentId String?
   parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
   children Category[] @relation("CategoryChildren")
@@ -49,28 +49,29 @@ model Category {
   @@map("categories")
 }
 
-// ============================================================
-// PRODUTO
-// ============================================================
 model Product {
   id          String  @id @default(uuid())
   name        String
   slug        String  @unique
   description String
-  /// Preço com 2 casas decimais — ex: 49.90
-  price       Decimal @db.Decimal(10, 2)
+  /// SQLite: Float. Produção PostgreSQL: Decimal @db.Decimal(10, 2)
+  price       Float
   stock       Int     @default(0)
-  /// Array de URLs das imagens
-  images      String[]
-  featured    Boolean @default(false)
-  /// Controla visibilidade sem deletar do banco
-  active      Boolean @default(true)
+  /// SQLite: JSON string. Produção PostgreSQL: String[]
+  images      String  @default("[]")
+  featured     Boolean @default(false)
+  active       Boolean @default(true)
+  /// Lista de ingredientes (uma por linha ou texto livre)
+  ingredients  String?
+  /// Modo de uso / instruções (uma por linha ou texto livre)
+  usage        String?
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
-  cartItems  CartItem[]
-  orderItems OrderItem[]
+  cartItems     CartItem[]
+  orderItems    OrderItem[]
+  wishlistItems WishlistItem[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -82,12 +83,8 @@ model Product {
   @@map("products")
 }
 
-// ============================================================
-// CARRINHO — um por usuário (clerkId), persistido no banco
-// ============================================================
 model Cart {
   id        String   @id @default(uuid())
-  /// Chave do Clerk — permite carrinho antes do perfil ser criado
   clerkId   String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -109,31 +106,20 @@ model CartItem {
   cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id])
 
-  /// Garante que cada produto apareça apenas uma vez por carrinho
   @@unique([cartId, productId])
   @@map("cart_items")
 }
 
-// ============================================================
-// PEDIDO
-// ============================================================
-enum OrderStatus {
-  PENDING
-  PAID
-  SHIPPED
-  DELIVERED
-  CANCELLED
-}
-
+/// SQLite: String @default("PENDING"). Produção PostgreSQL: restaurar enum
 model Order {
-  id              String      @id @default(uuid())
-  status          OrderStatus @default(PENDING)
-  /// Total calculado no servidor no momento da criação
-  total           Decimal     @db.Decimal(10, 2)
+  id              String   @id @default(uuid())
+  /// PENDING | PAID | SHIPPED | DELIVERED | CANCELLED
+  status          String   @default("PENDING")
+  price           Float
   stripePaymentId String?
   stripeSessionId String?
-  createdAt       DateTime    @default(now())
-  updatedAt       DateTime    @updatedAt
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
 
   userProfileId String
   userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
@@ -141,15 +127,14 @@ model Order {
 
   @@index([userProfileId])
   @@index([status])
-  @@index([stripePaymentId])
   @@map("orders")
 }
 
 model OrderItem {
-  id        String  @id @default(uuid())
-  quantity  Int
-  /// Preço snapshot — preserva o preço cobrado mesmo se o produto mudar
-  price     Decimal @db.Decimal(10, 2)
+  id       String @id @default(uuid())
+  quantity Int
+  /// Snapshot do preço no momento da compra
+  price    Float
 
   orderId   String
   productId String
@@ -157,4 +142,66 @@ model OrderItem {
   product   Product @relation(fields: [productId], references: [id])
 
   @@map("order_items")
+}
+
+/// Configurações globais do site (singleton — id sempre = "default")
+model SiteSettings {
+  id                   String   @id @default("default")
+  heroTitle            String   @default("Descubra a Verdade da Beleza")
+  heroSubtitle         String   @default("Cosméticos de luxo formulados com a pureza da ciência e da natureza")
+  heroImageUrl         String?
+  heroVideoUrl         String?
+  aboutTitle           String   @default("Nossa História")
+  aboutText            String   @default("Nascemos da paixão por uma beleza autêntica, sustentável e eficaz. A Altheia foi criada para mulheres que buscam o melhor da natureza aliado à inovação científica.")
+  aboutImageUrl        String?
+  featuredVideoUrl     String?
+  featuredVideoTitle   String   @default("Nossa Jornada")
+  featuredVideoDesc    String   @default("Conheça a história por trás de cada produto Altheia")
+  instagramUrl         String?
+  youtubeUrl           String?
+  twitterUrl           String?
+  newsletterTitle      String   @default("Receba Novidades Exclusivas")
+  newsletterSubtitle   String   @default("Cadastre-se e ganhe 10% de desconto na primeira compra")
+  metaTitle            String?
+  metaDescription      String?
+  shippingFreeThreshold Float   @default(199)
+  updatedAt            DateTime @updatedAt
+
+  @@map("site_settings")
+}
+
+/// Lista de desejos do usuário
+model Wishlist {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  items WishlistItem[]
+
+  @@index([clerkId])
+  @@map("wishlists")
+}
+
+model WishlistItem {
+  id         String @id @default(uuid())
+  wishlistId String
+  productId  String
+
+  wishlist Wishlist @relation(fields: [wishlistId], references: [id], onDelete: Cascade)
+  product  Product  @relation(fields: [productId], references: [id])
+
+  @@unique([wishlistId, productId])
+  @@map("wishlist_items")
+}
+
+/// Inscritos na newsletter
+model NewsletterSubscriber {
+  id          String   @id @default(uuid())
+  email       String   @unique
+  confirmedAt DateTime?
+  createdAt   DateTime @default(now())
+
+  @@index([email])
+  @@map("newsletter_subscribers")
 }

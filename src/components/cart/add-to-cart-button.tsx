@@ -2,10 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { ShoppingCart, Check, Loader2 } from "lucide-react";
-import { useUser } from "@clerk/nextjs";
-import { Button } from "@/components/ui/button";
 import { addToCart } from "@/actions/cart";
 import { addToGuestCart } from "@/hooks/use-guest-cart";
+import { useAuth } from "@/context/auth";
+import { cn } from "@/lib/utils";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -13,18 +13,12 @@ interface AddToCartButtonProps {
   className?: string;
 }
 
-/**
- * Botão "Adicionar ao carrinho" — suporta usuários autenticados e guests.
- *
- * - Autenticado: persiste no banco via Server Action
- * - Guest: salva no localStorage (sincronizado ao banco no próximo login)
- */
 export function AddToCartButton({
   productId,
   disabled = false,
   className,
 }: AddToCartButtonProps) {
-  const { isSignedIn, isLoaded } = useUser();
+  const { isSignedIn, isLoaded } = useAuth();
   const [isPending, startTransition] = useTransition();
   const [added, setAdded] = useState(false);
 
@@ -32,13 +26,10 @@ export function AddToCartButton({
     startTransition(async () => {
       try {
         if (isSignedIn) {
-          // Usuário autenticado — persiste no banco
           await addToCart({ productId, quantity: 1 });
         } else {
-          // Guest — salva no localStorage para sincronizar ao logar
           addToGuestCart(productId, 1);
         }
-
         setAdded(true);
         setTimeout(() => setAdded(false), 2000);
       } catch (err) {
@@ -47,14 +38,45 @@ export function AddToCartButton({
     });
   }
 
-  // Aguarda Clerk carregar antes de permitir a ação
   const isDisabled = disabled || isPending || !isLoaded;
 
   return (
-    <Button
+    <button
       onClick={handleAddToCart}
       disabled={isDisabled}
-      className={className}
+      className={cn(
+        "flex items-center justify-center gap-2 px-8 py-3.5 rounded-full text-sm font-semibold tracking-widest uppercase transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed",
+        className
+      )}
+      style={
+        added
+          ? {
+              backgroundColor: "#4ade80",
+              color: "#0A3D2F",
+              boxShadow: "0 0 20px rgba(74,222,128,0.3)",
+            }
+          : isDisabled && !isPending
+          ? {
+              backgroundColor: "rgba(201,162,39,0.3)",
+              color: "rgba(245,240,230,0.5)",
+            }
+          : {
+              backgroundColor: "#C9A227",
+              color: "#0A3D2F",
+            }
+      }
+      onMouseEnter={(e) => {
+        if (!isDisabled && !added) {
+          (e.currentTarget as HTMLElement).style.backgroundColor = "#E8C84A";
+          (e.currentTarget as HTMLElement).style.boxShadow = "0 0 20px rgba(201,162,39,0.4)";
+        }
+      }}
+      onMouseLeave={(e) => {
+        if (!isDisabled && !added) {
+          (e.currentTarget as HTMLElement).style.backgroundColor = "#C9A227";
+          (e.currentTarget as HTMLElement).style.boxShadow = "none";
+        }
+      }}
     >
       {isPending ? (
         <Loader2 className="h-4 w-4 animate-spin" />
@@ -63,11 +85,7 @@ export function AddToCartButton({
       ) : (
         <ShoppingCart className="h-4 w-4" />
       )}
-      {isPending
-        ? "Adicionando..."
-        : added
-        ? "Adicionado!"
-        : "Adicionar ao carrinho"}
-    </Button>
+      {isPending ? "Adicionando..." : added ? "Adicionado!" : "Adicionar ao Carrinho"}
+    </button>
   );
 }

@@ -1,8 +1,8 @@
-import { auth, currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import type { Metadata } from "next";
+import { User } from "lucide-react";
 import { prisma } from "@/lib/prisma";
+import { getServerAuth, getServerUser } from "@/lib/auth";
 import { formatPrice } from "@/lib/utils";
 import { ORDER_STATUS_LABEL, ORDER_STATUS_COLOR } from "@/lib/constants";
 
@@ -11,25 +11,24 @@ export const metadata: Metadata = {
 };
 
 export default async function AccountPage() {
-  const { userId } = await auth();
+  const { userId } = await getServerAuth();
   if (!userId) redirect("/sign-in");
 
-  const clerkUser = await currentUser();
+  const clerkUser = await getServerUser();
 
-  // Busca ou cria o perfil no banco ao primeiro acesso
+  // Cria ou busca o perfil no banco
   const profile = await prisma.userProfile.upsert({
     where: { clerkId: userId },
     update: {},
     create: {
       clerkId: userId,
       email: clerkUser?.emailAddresses[0]?.emailAddress ?? "",
-      firstName: clerkUser?.firstName,
-      lastName: clerkUser?.lastName,
-      avatarUrl: clerkUser?.imageUrl,
+      firstName: clerkUser?.firstName ?? null,
+      lastName: clerkUser?.lastName ?? null,
+      avatarUrl: clerkUser?.imageUrl ?? null,
     },
   });
 
-  // Últimos 5 pedidos
   const orders = await prisma.order.findMany({
     where: { userProfileId: profile.id },
     include: { items: { include: { product: { select: { name: true } } } } },
@@ -41,7 +40,9 @@ export default async function AccountPage() {
     <div className="container mx-auto px-4 py-10 max-w-3xl">
       {/* Header */}
       <div className="flex items-center gap-4 mb-10">
-        <UserButton />
+        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary text-primary-foreground">
+          <User className="h-5 w-5" />
+        </div>
         <div>
           <h1 className="text-2xl font-bold">
             Olá, {clerkUser?.firstName ?? "visitante"}!
@@ -57,7 +58,9 @@ export default async function AccountPage() {
         <h2 className="text-xl font-semibold mb-4">Últimos pedidos</h2>
 
         {orders.length === 0 ? (
-          <p className="text-muted-foreground">Você ainda não fez nenhum pedido.</p>
+          <p className="text-muted-foreground">
+            Você ainda não fez nenhum pedido.
+          </p>
         ) : (
           <div className="space-y-4">
             {orders.map((order) => (
@@ -78,7 +81,7 @@ export default async function AccountPage() {
                   {order.items.map((i) => i.product.name).join(", ")}
                 </p>
                 <p className="font-semibold text-primary">
-                  {formatPrice(Number(order.total))}
+                  {formatPrice(Number(order.price))}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   {new Intl.DateTimeFormat("pt-BR", {
