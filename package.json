@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
+    "build:prod": "cp prisma/schema.production.prisma prisma/schema.prisma && prisma generate && next build",
     "start": "next start",
     "lint": "next lint",
     "type-check": "tsc --noEmit",
@@ -13,7 +14,8 @@
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "db:generate": "prisma generate",
-    "db:reset": "prisma migrate reset --force"
+    "db:reset": "prisma migrate reset --force",
+    "db:push:prod": "cp prisma/schema.production.prisma prisma/schema.prisma && prisma db push"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
