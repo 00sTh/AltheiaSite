@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Users, Search, ChevronRight, ShoppingBag } from "lucide-react";
-import { getAdminUsers } from "@/actions/users";
-import { formatPrice } from "@/lib/utils";
+import { Users, Search, UserPlus, Shield, ShieldOff } from "lucide-react";
+import { getAdminSiteUsers } from "@/actions/site-users";
 
 interface UsersPageProps {
   searchParams: Promise<{ q?: string }>;
@@ -9,7 +8,7 @@ interface UsersPageProps {
 
 export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
   const { q } = await searchParams;
-  const users = await getAdminUsers(q);
+  const users = await getAdminSiteUsers(q);
 
   return (
     <div>
@@ -35,6 +34,15 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             </p>
           </div>
         </div>
+
+        <Link
+          href="/admin/users/new"
+          className="flex items-center gap-2 px-4 py-2.5 rounded-xl text-sm font-semibold transition-all"
+          style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+        >
+          <UserPlus className="h-4 w-4" />
+          Novo usuário
+        </Link>
       </div>
 
       {/* Search */}
@@ -47,7 +55,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
           <input
             name="q"
             defaultValue={q}
-            placeholder="Buscar por email ou nome…"
+            placeholder="Buscar por username ou email…"
             className="w-full pl-10 pr-4 py-2.5 rounded-xl text-sm outline-none"
             style={{
               backgroundColor: "rgba(15,74,55,0.5)",
@@ -71,7 +79,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                 borderBottom: "1px solid rgba(201,162,39,0.15)",
               }}
             >
-              {["Usuário", "Email", "Pedidos", "Total gasto", "Cadastro", ""].map(
+              {["Username", "E-mail", "Permissão", "Status", "Cadastro", "Ações"].map(
                 (h) => (
                   <th
                     key={h}
@@ -92,7 +100,14 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                   className="px-5 py-12 text-center"
                   style={{ color: "rgba(200,187,168,0.5)" }}
                 >
-                  Nenhum usuário encontrado.
+                  Nenhum usuário encontrado.{" "}
+                  <Link
+                    href="/admin/users/new"
+                    style={{ color: "#C9A227" }}
+                    className="underline"
+                  >
+                    Criar o primeiro usuário
+                  </Link>
                 </td>
               </tr>
             ) : (
@@ -100,39 +115,23 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                 <tr
                   key={user.id}
                   style={{
-                    backgroundColor:
-                      idx % 2 === 0
-                        ? "transparent"
-                        : "rgba(15,74,55,0.2)",
+                    backgroundColor: idx % 2 === 0 ? "transparent" : "rgba(15,74,55,0.2)",
                     borderBottom: "1px solid rgba(201,162,39,0.07)",
                   }}
                 >
-                  {/* Name / avatar */}
+                  {/* Username */}
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-3">
-                      {user.avatarUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
-                          src={user.avatarUrl}
-                          alt=""
-                          className="h-8 w-8 rounded-full object-cover"
-                        />
-                      ) : (
-                        <div
-                          className="h-8 w-8 rounded-full flex items-center justify-center text-xs font-bold"
-                          style={{
-                            backgroundColor: "rgba(201,162,39,0.15)",
-                            color: "#C9A227",
-                          }}
-                        >
-                          {(user.firstName?.[0] ?? user.email[0]).toUpperCase()}
-                        </div>
-                      )}
-                      <span style={{ color: "#F5F0E6" }}>
-                        {user.firstName || user.lastName
-                          ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
-                          : "—"}
-                      </span>
+                    <div className="flex items-center gap-2">
+                      <div
+                        className="h-7 w-7 rounded-full flex items-center justify-center text-xs font-bold"
+                        style={{
+                          backgroundColor: "rgba(201,162,39,0.15)",
+                          color: "#C9A227",
+                        }}
+                      >
+                        {user.username[0].toUpperCase()}
+                      </div>
+                      <span style={{ color: "#F5F0E6" }}>{user.username}</span>
                     </div>
                   </td>
 
@@ -141,38 +140,55 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                     {user.email}
                   </td>
 
-                  {/* Orders */}
+                  {/* Role */}
                   <td className="px-5 py-3">
-                    <div className="flex items-center gap-1.5">
-                      <ShoppingBag
-                        className="h-3.5 w-3.5"
-                        style={{ color: "rgba(201,162,39,0.6)" }}
-                      />
-                      <span style={{ color: "#F5F0E6" }}>{user.orderCount}</span>
-                    </div>
+                    <span
+                      className="flex items-center gap-1.5 w-fit px-2.5 py-1 rounded-full text-xs font-medium"
+                      style={
+                        user.role === "ADMIN"
+                          ? { backgroundColor: "rgba(201,162,39,0.15)", color: "#C9A227" }
+                          : { backgroundColor: "rgba(59,130,246,0.12)", color: "#60a5fa" }
+                      }
+                    >
+                      {user.role === "ADMIN" ? (
+                        <Shield className="h-3 w-3" />
+                      ) : (
+                        <ShieldOff className="h-3 w-3" />
+                      )}
+                      {user.role === "ADMIN" ? "Admin" : "Usuário"}
+                    </span>
                   </td>
 
-                  {/* Total spent */}
-                  <td
-                    className="px-5 py-3 font-medium"
-                    style={{ color: "#C9A227" }}
-                  >
-                    {formatPrice(user.totalSpent)}
+                  {/* Active */}
+                  <td className="px-5 py-3">
+                    <span
+                      className="text-xs px-2.5 py-1 rounded-full font-medium"
+                      style={
+                        user.active
+                          ? { backgroundColor: "rgba(34,197,94,0.12)", color: "#22c55e" }
+                          : { backgroundColor: "rgba(224,82,82,0.12)", color: "#e05252" }
+                      }
+                    >
+                      {user.active ? "Ativo" : "Inativo"}
+                    </span>
                   </td>
 
                   {/* Date */}
-                  <td className="px-5 py-3 text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
+                  <td
+                    className="px-5 py-3 text-xs"
+                    style={{ color: "rgba(200,187,168,0.5)" }}
+                  >
                     {new Date(user.createdAt).toLocaleDateString("pt-BR")}
                   </td>
 
                   {/* Actions */}
                   <td className="px-5 py-3">
                     <Link
-                      href={`/admin/users/${user.id}`}
-                      className="flex items-center gap-1 text-xs font-medium hover:underline"
+                      href={`/admin/users/${user.id}/edit`}
+                      className="text-xs font-medium hover:underline"
                       style={{ color: "#C9A227" }}
                     >
-                      Ver <ChevronRight className="h-3 w-3" />
+                      Editar
                     </Link>
                   </td>
                 </tr>

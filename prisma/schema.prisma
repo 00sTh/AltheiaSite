@@ -16,6 +16,23 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Usuários do sistema com login próprio (auth sem Clerk)
+model SiteUser {
+  id           String   @id @default(uuid())
+  username     String   @unique
+  email        String   @unique
+  passwordHash String
+  /// USER | ADMIN
+  role         String   @default("USER")
+  active       Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@index([username])
+  @@index([email])
+  @@map("site_users")
+}
+
 model UserProfile {
   id        String   @id @default(uuid())
   clerkId   String   @unique

@@ -5,7 +5,10 @@ import Image from "next/image";
 import { ShoppingCart, User, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
+import { LogoutButton } from "./logout-button";
 import { APP_NAME } from "@/lib/constants";
+
+const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const navLinks = [
   { href: "/", label: "Início" },
@@ -141,6 +144,9 @@ export function NavbarClient({ userId, cartCount, siteLogoUrl }: NavbarClientPro
               className="h-5 w-5 transition-all duration-200 group-hover:text-[#C9A227] group-hover:drop-shadow-[0_0_8px_rgba(201,162,39,0.6)]"
             />
           </Link>
+
+          {/* Logout (DEMO_MODE, usuário logado) */}
+          {DEMO_MODE && userId && <LogoutButton />}
 
           {/* Hamburger mobile */}
           <MobileNav userId={userId} cartCount={cartCount} />

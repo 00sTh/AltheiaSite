@@ -1,18 +1,16 @@
 /**
  * middleware.ts
  *
- * DEMO_MODE=true  → passthrough (sem verificação de auth)
- * DEMO_MODE=false → Clerk middleware com proteção de rotas
+ * DEMO_MODE=true  → auth próprio via cookie site_session
+ * DEMO_MODE=false → Clerk middleware
  */
 import { NextResponse, type NextRequest } from "next/server";
 
 const DEMO_MODE = process.env.DEMO_MODE === "true";
 
-// Rotas que não precisam de autenticação
-const PUBLIC_PATHS = [
+// Rotas sempre públicas (sem auth)
+const PUBLIC_PREFIXES = [
   "/",
-  "/sign-in",
-  "/sign-up",
   "/products",
   "/sobre-nos",
   "/videos",
@@ -24,12 +22,46 @@ const PUBLIC_PATHS = [
   "/api/check-payment",
   "/robots.txt",
   "/sitemap.xml",
+  "/_next",
+  "/favicon",
 ];
 
-function isPublic(pathname: string): boolean {
-  return PUBLIC_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?")
+// Rotas de auth (sem proteção)
+const AUTH_PATHS = ["/sign-in", "/sign-up", "/admin/login"];
+
+function isPublicPath(pathname: string): boolean {
+  if (pathname === "/") return true;
+  return PUBLIC_PREFIXES.some(
+    (p) => p !== "/" && (pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"))
   );
+}
+
+function isAuthPath(pathname: string): boolean {
+  return AUTH_PATHS.some(
+    (p) => pathname === p || pathname.startsWith(p + "/")
+  );
+}
+
+function demoMiddleware(req: NextRequest): NextResponse {
+  const { pathname } = req.nextUrl;
+
+  // Sempre permite arquivos estáticos e auth pages
+  if (isAuthPath(pathname)) return NextResponse.next();
+  if (isPublicPath(pathname)) return NextResponse.next();
+
+  // Verificar presença do cookie (verificação completa é feita em server components)
+  const session = req.cookies.get("site_session")?.value;
+
+  if (!session) {
+    if (pathname.startsWith("/admin")) {
+      return NextResponse.redirect(new URL("/admin/login", req.url));
+    }
+    return NextResponse.redirect(
+      new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, req.url)
+    );
+  }
+
+  return NextResponse.next();
 }
 
 async function clerkMiddleware(req: NextRequest) {
@@ -55,7 +87,6 @@ async function clerkMiddleware(req: NextRequest) {
     const { userId, sessionClaims } = await auth();
     const pathname = request.nextUrl.pathname;
 
-    // Admin routes: require admin role
     if (pathname.startsWith("/admin")) {
       if (!userId) {
         return NextResponse.redirect(new URL("/sign-in?redirect_url=/admin", request.url));
@@ -66,7 +97,6 @@ async function clerkMiddleware(req: NextRequest) {
       }
     }
 
-    // Protected routes: require login
     if (!isPublicRoute(request) && !userId) {
       return NextResponse.redirect(
         new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, request.url)
@@ -81,7 +111,7 @@ async function clerkMiddleware(req: NextRequest) {
 
 export default async function middleware(req: NextRequest) {
   if (DEMO_MODE) {
-    return NextResponse.next();
+    return demoMiddleware(req);
   }
   return clerkMiddleware(req);
 }
