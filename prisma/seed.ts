@@ -209,7 +209,7 @@ async function main() {
     await prisma.product.upsert({
       where: { slug: rest.slug },
       update: {},
-      create: { ...rest, images: JSON.stringify(images) },
+      create: { ...rest, images: images },
     });
     console.log(`  📦 ${produto.name}`);
   }

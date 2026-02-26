@@ -19,8 +19,10 @@ function createPrismaClient() {
         imagesArray: {
           needs: { images: true },
           compute(product) {
+            // PostgreSQL: images já é string[]. SQLite: images é JSON string.
+            if (Array.isArray(product.images)) return product.images as string[];
             try {
-              const parsed = JSON.parse(product.images);
+              const parsed = JSON.parse(product.images as unknown as string);
               return Array.isArray(parsed) ? (parsed as string[]) : [];
             } catch {
               return [] as string[];

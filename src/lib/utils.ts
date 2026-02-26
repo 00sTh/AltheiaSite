@@ -20,8 +20,9 @@ export function truncate(text: string, maxLength: number): string {
   return text.slice(0, maxLength).trimEnd() + "…";
 }
 
-/** Parseia o campo images do banco (JSON string) → string[] */
-export function parseImages(images: string): string[] {
+/** Parseia o campo images — suporta string[] (PostgreSQL) e JSON string (SQLite) */
+export function parseImages(images: string | string[]): string[] {
+  if (Array.isArray(images)) return images;
   try {
     const parsed = JSON.parse(images);
     return Array.isArray(parsed) ? parsed : [];
@@ -30,7 +31,7 @@ export function parseImages(images: string): string[] {
   }
 }
 
-/** Serializa array de imagens para JSON string (para salvar no banco) */
-export function stringifyImages(images: string[]): string {
-  return JSON.stringify(images);
+/** Retorna o array de imagens pronto para salvar (PostgreSQL: passa direto) */
+export function stringifyImages(images: string[]): string[] {
+  return images;
 }

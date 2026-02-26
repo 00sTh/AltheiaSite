@@ -1,32 +1,36 @@
+/**
+ * SCHEMA DE PRODUÇÃO — PostgreSQL (Neon)
+ *
+ * Este arquivo é usado pelo build do Vercel via:
+ *   cp prisma/schema.production.prisma prisma/schema.prisma
+ *
+ * Diferenças do schema.prisma (SQLite):
+ *   - provider "postgresql" com directUrl
+ *   - price/shippingFreeThreshold: Decimal @db.Decimal(10,2)
+ *   - images: String[]
+ *   - status: enum OrderStatus
+ *   - paymentMethod: enum PaymentMethod
+ */
+
 generator client {
   provider = "prisma-client-js"
 }
 
-// ============================================================
-// Suporta SQLite (dev/demo) e PostgreSQL (produção Neon).
-// Para dev local: DATABASE_URL="file:./prisma/demo.db" (DEMO_MODE=true)
-// Para produção:  DATABASE_URL=postgresql://... + DIRECT_URL=postgresql://...
-// ============================================================
 datasource db {
   provider  = "postgresql"
   url       = env("DATABASE_URL")
   directUrl = env("DIRECT_URL")
 }
 
-/// Usuários do sistema com login próprio (auth sem Clerk)
 model SiteUser {
   id                  String    @id @default(uuid())
   username            String    @unique
   email               String    @unique
   passwordHash        String
-  /// USER | ADMIN
   role                String    @default("USER")
   active              Boolean   @default(true)
-  /// E-mail verificado pelo link de confirmação
   emailVerified       Boolean   @default(false)
-  /// Token de verificação de e-mail (UUID hex)
   emailVerifyToken    String?
-  /// Expiração do token (24h após geração)
   emailVerifyTokenExp DateTime?
   createdAt           DateTime  @default(now())
   updatedAt           DateTime  @updatedAt
@@ -71,21 +75,17 @@ model Category {
 }
 
 model Product {
-  id          String  @id @default(uuid())
+  id          String          @id @default(uuid())
   name        String
-  slug        String  @unique
+  slug        String          @unique
   description String
-  /// SQLite: Float. Produção PostgreSQL: Decimal @db.Decimal(10, 2)
-  price       Float
-  stock       Int     @default(0)
-  /// SQLite: JSON string. Produção PostgreSQL: String[]
-  images      String  @default("[]")
-  featured     Boolean @default(false)
-  active       Boolean @default(true)
-  /// Lista de ingredientes (uma por linha ou texto livre)
-  ingredients  String?
-  /// Modo de uso / instruções (uma por linha ou texto livre)
-  usage        String?
+  price       Decimal         @db.Decimal(10, 2)
+  stock       Int             @default(0)
+  images      String[]        @default([])
+  featured    Boolean         @default(false)
+  active      Boolean         @default(true)
+  ingredients String?
+  usage       String?
 
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
@@ -110,7 +110,7 @@ model Cart {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userProfileId String?     @unique
+  userProfileId String?      @unique
   userProfile   UserProfile? @relation(fields: [userProfileId], references: [id])
   items         CartItem[]
 
@@ -131,29 +131,37 @@ model CartItem {
   @@map("cart_items")
 }
 
-/// SQLite: String @default("PENDING"). Produção PostgreSQL: restaurar enum
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+enum PaymentMethod {
+  WHATSAPP
+  CREDIT_CARD
+  PIX
+}
+
 model Order {
-  id              String   @id @default(uuid())
-  /// PENDING | PAID | SHIPPED | DELIVERED | CANCELLED
-  status          String   @default("PENDING")
-  price           Float
+  id              String        @id @default(uuid())
+  status          OrderStatus   @default(PENDING)
+  price           Decimal       @db.Decimal(10, 2)
   stripePaymentId String?
   stripeSessionId String?
-  /// ID do pagamento na Cielo (PaymentId UUID)
   cieloPaymentId  String?
-  /// Método de pagamento: WHATSAPP | CREDIT_CARD | PIX
-  paymentMethod   String   @default("WHATSAPP")
-  /// Código PIX copia-e-cola (quando paymentMethod=PIX)
+  paymentMethod   PaymentMethod @default(WHATSAPP)
   pixQrCode       String?
-  // Dados do comprador / entrega
   customerName    String?
   customerEmail   String?
   customerPhone   String?
   /// JSON: { street, number, complement, city, state, zip }
   shippingAddress String?
   notes           String?
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
 
   userProfileId String
   userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
@@ -165,10 +173,10 @@ model Order {
 }
 
 model OrderItem {
-  id       String @id @default(uuid())
+  id       String  @id @default(uuid())
   quantity Int
   /// Snapshot do preço no momento da compra
-  price    Float
+  price    Decimal @db.Decimal(10, 2)
 
   orderId   String
   productId String
@@ -181,11 +189,8 @@ model OrderItem {
 /// Configurações globais do site (singleton — id sempre = "default")
 model SiteSettings {
   id                   String   @id @default("default")
-  // Navbar
   siteLogoUrl          String?
-  // Contato / WhatsApp
   whatsappNumber       String   @default("5511999999999")
-  // Hero
   heroTitle            String   @default("Descubra a Verdade da Beleza")
   heroSubtitle         String   @default("Cosméticos de luxo formulados com a pureza da ciência e da natureza")
   heroImageUrl         String?
@@ -193,26 +198,21 @@ model SiteSettings {
   leftVideoUrl         String?
   rightVideoUrl        String?
   heroLogoUrl          String?
-  // Lumina Highlight
   luminaLabel          String   @default("Produto Estrela")
   luminaTitle          String   @default("Descubra o Lumina Sérum")
   luminaSubtitle       String   @default("O sérum que redefiniu o padrão de luminosidade na skincare brasileira. Formulado com Vitamina C estabilizada e extrato de algas douradas.")
   luminaImageUrl       String?
   luminaBadgeText      String   @default("Novo")
   luminaProductLink    String   @default("/products")
-  // About
   aboutTitle           String   @default("Nossa História")
   aboutText            String   @default("Nascemos da paixão por uma beleza autêntica, sustentável e eficaz. A Altheia foi criada para mulheres que buscam o melhor da natureza aliado à inovação científica.")
   aboutImageUrl        String?
-  // Videos
   featuredVideoUrl     String?
   featuredVideoTitle   String   @default("Nossa Jornada")
   featuredVideoDesc    String   @default("Conheça a história por trás de cada produto Altheia")
-  // Social
   instagramUrl         String?
   youtubeUrl           String?
   twitterUrl           String?
-  // WhyAltheia (benefícios editáveis)
   whyTitle             String   @default("Por que Althéia?")
   whySubtitle          String   @default("Qualidade, luxo e eficácia em cada produto.")
   benefit1Icon         String   @default("Truck")
@@ -224,13 +224,11 @@ model SiteSettings {
   benefit3Icon         String   @default("ShieldCheck")
   benefit3Title        String   @default("Pagamento seguro")
   benefit3Text         String   @default("Transações criptografadas e dados protegidos.")
-  // Newsletter
   newsletterTitle      String   @default("Receba Novidades Exclusivas")
   newsletterSubtitle   String   @default("Cadastre-se e ganhe 10% de desconto na primeira compra")
-  // SEO + E-commerce
   metaTitle            String?
   metaDescription      String?
-  shippingFreeThreshold Float   @default(199)
+  shippingFreeThreshold Decimal @default(199) @db.Decimal(10, 2)
   updatedAt            DateTime @updatedAt
 
   @@map("site_settings")
@@ -276,10 +274,10 @@ model WishlistItem {
 
 /// Inscritos na newsletter
 model NewsletterSubscriber {
-  id          String   @id @default(uuid())
-  email       String   @unique
+  id          String    @id @default(uuid())
+  email       String    @unique
   confirmedAt DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   @@index([email])
   @@map("newsletter_subscribers")
