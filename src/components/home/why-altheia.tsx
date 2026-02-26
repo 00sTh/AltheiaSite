@@ -1,100 +1,51 @@
-"use client";
+import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
 
-import { motion } from "framer-motion";
-import { FlaskConical, Leaf, ShieldCheck } from "lucide-react";
-import { SectionTitle } from "@/components/ui/section-title";
-import { staggerContainer, fadeInUp } from "@/lib/animations";
-
-const reasons = [
+const benefits = [
   {
-    icon: FlaskConical,
-    title: "Ciência de Ponta",
-    description:
-      "Nossa equipe de bioquímicos desenvolve fórmulas exclusivas baseadas nas últimas pesquisas dermatológicas internacionais.",
+    icon: Truck,
+    title: "Frete grátis acima de R$199",
+    description: "Entrega em todo o Brasil sem custo adicional.",
   },
   {
-    icon: Leaf,
-    title: "Ingredientes Premium",
-    description:
-      "Selecionamos os ativos mais raros e eficazes do planeta: péptidos marinhos, óleos botânicos e extratos de flores alpinas.",
+    icon: RotateCcw,
+    title: "Devolução em 30 dias",
+    description: "Satisfação garantida ou seu dinheiro de volta.",
   },
   {
     icon: ShieldCheck,
-    title: "Resultados Comprovados",
-    description:
-      "Testado por dermatologistas e aprovado por mais de 50.000 clientes que reportaram visível melhora em 4 semanas.",
+    title: "Pagamento seguro",
+    description: "Transações criptografadas e dados protegidos.",
   },
 ];
 
 export function WhyAltheia() {
   return (
     <section
-      className="py-24 px-4"
-      style={{ backgroundColor: "#0F4A37" }}
+      className="py-8 px-4"
+      style={{
+        backgroundColor: "#0F4A37",
+        borderTop: "1px solid rgba(201,162,39,0.15)",
+      }}
     >
       <div className="container mx-auto max-w-7xl">
-        <SectionTitle
-          label="Por que Altheia"
-          title="O Padrão do Luxo Sustentável"
-          subtitle="Cada produto é uma declaração de que a beleza real não exige compromissos com a natureza."
-          align="center"
-          className="mb-16"
-        />
-
-        <motion.div
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, margin: "-50px" }}
-          variants={staggerContainer}
-          className="grid grid-cols-1 md:grid-cols-3 gap-8"
-        >
-          {reasons.map(({ icon: Icon, title, description }) => (
-            <motion.div
-              key={title}
-              variants={fadeInUp}
-              className="relative group rounded-2xl p-8 transition-all duration-300"
-              style={{
-                backgroundColor: "rgba(10,61,47,0.6)",
-                border: "1px solid rgba(201,162,39,0.15)",
-              }}
-              whileHover={{
-                borderColor: "rgba(201,162,39,0.5)",
-                boxShadow: "0 0 30px rgba(201,162,39,0.1)",
-              }}
-            >
-              {/* Icon */}
-              <div
-                className="w-14 h-14 rounded-2xl flex items-center justify-center mb-6"
-                style={{
-                  backgroundColor: "rgba(201,162,39,0.1)",
-                  border: "1px solid rgba(201,162,39,0.3)",
-                }}
-              >
-                <Icon className="h-6 w-6" style={{ color: "#C9A227" }} />
+        <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[rgba(201,162,39,0.2)]">
+          {benefits.map(({ icon: Icon, title, description }) => (
+            <div key={title} className="flex items-start gap-4 px-8 py-6">
+              <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: "#C9A227" }} />
+              <div>
+                <p
+                  className="font-medium text-sm mb-1"
+                  style={{ color: "#F5F0E6" }}
+                >
+                  {title}
+                </p>
+                <p className="text-xs leading-relaxed" style={{ color: "#C8BBA8" }}>
+                  {description}
+                </p>
               </div>
-
-              {/* Content */}
-              <h3
-                className="font-serif text-xl font-bold mb-3"
-                style={{ color: "#F5F0E6" }}
-              >
-                {title}
-              </h3>
-              <p className="text-sm leading-relaxed" style={{ color: "#C8BBA8" }}>
-                {description}
-              </p>
-
-              {/* Hover accent line */}
-              <div
-                className="absolute bottom-0 left-8 right-8 h-px opacity-0 group-hover:opacity-100 transition-opacity duration-300"
-                style={{
-                  background:
-                    "linear-gradient(to right, transparent, #C9A227, transparent)",
-                }}
-              />
-            </motion.div>
+            </div>
           ))}
-        </motion.div>
+        </div>
       </div>
     </section>
   );

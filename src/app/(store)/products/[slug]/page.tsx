@@ -12,7 +12,7 @@ import { isInWishlist } from "@/actions/wishlist";
 import { getSiteSettings } from "@/actions/admin";
 import { getServerAuth } from "@/lib/auth";
 import { formatPrice, truncate } from "@/lib/utils";
-import { parseImages } from "@/lib/prisma";
+import { parseImages } from "@/lib/utils";
 import type { ProductWithCategory } from "@/types";
 
 interface ProductPageProps {

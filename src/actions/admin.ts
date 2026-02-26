@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { prisma, stringifyImages } from "@/lib/prisma";
+import { prisma } from "@/lib/prisma";
+import { stringifyImages } from "@/lib/utils";
 import { getServerAuth } from "@/lib/auth";
 import { uploadImage } from "@/lib/blob";
 import { z } from "zod";

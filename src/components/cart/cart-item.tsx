@@ -5,7 +5,7 @@ import { Minus, Plus, Trash2 } from "lucide-react";
 import { useTransition } from "react";
 import { updateQuantity, removeFromCart } from "@/actions/cart";
 import { formatPrice } from "@/lib/utils";
-import { parseImages } from "@/lib/prisma";
+import { parseImages } from "@/lib/utils";
 import type { CartItemWithProduct } from "@/types";
 
 interface CartItemCardProps {

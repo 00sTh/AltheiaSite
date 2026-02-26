@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { prisma } from "@/lib/prisma";
-import { parseImages } from "@/lib/prisma";
-import { formatPrice } from "@/lib/utils";
+import { formatPrice, parseImages } from "@/lib/utils";
 import { Plus, Pencil, EyeOff, Eye } from "lucide-react";
 
 export const metadata: Metadata = { title: "Admin — Produtos" };

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
+import { parseImages } from "@/lib/utils";
 import { ProductForm } from "@/components/admin/product-form";
 
 export const metadata: Metadata = { title: "Admin — Editar Produto" };
@@ -18,6 +19,24 @@ export default async function EditProductPage({ params }: Props) {
   ]);
 
   if (!product) notFound();
+
+  // Serialize to plain objects — Prisma instances have symbol properties
+  // that cannot be passed to Client Components.
+  const plainProduct = {
+    id: product.id,
+    name: product.name,
+    slug: product.slug,
+    description: product.description,
+    price: Number(product.price),
+    stock: product.stock,
+    images: parseImages(product.images as string),
+    featured: product.featured,
+    active: product.active,
+    ingredients: product.ingredients,
+    usage: product.usage,
+    categoryId: product.categoryId,
+  };
+  const plainCategories = categories.map(({ id, name }) => ({ id, name }));
 
   return (
     <div>
@@ -38,7 +57,7 @@ export default async function EditProductPage({ params }: Props) {
         className="rounded-2xl p-6"
         style={{ backgroundColor: "#0A2419", border: "1px solid rgba(201,162,39,0.15)" }}
       >
-        <ProductForm product={product} categories={categories} />
+        <ProductForm product={plainProduct} categories={plainCategories} />
       </div>
     </div>
   );

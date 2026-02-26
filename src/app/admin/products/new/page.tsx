@@ -6,7 +6,8 @@ import { ProductForm } from "@/components/admin/product-form";
 export const metadata: Metadata = { title: "Admin — Novo Produto" };
 
 export default async function NewProductPage() {
-  const categories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const rawCategories = await prisma.category.findMany({ orderBy: { name: "asc" } });
+  const categories = rawCategories.map(({ id, name }) => ({ id, name }));
 
   return (
     <div>

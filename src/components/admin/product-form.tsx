@@ -3,12 +3,30 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct } from "@/actions/admin";
-import { parseImages } from "@/lib/prisma";
-import type { Category, Product } from "@prisma/client";
+
+interface ProductFormData {
+  id: string;
+  name: string;
+  slug: string;
+  description: string;
+  price: number;
+  stock: number;
+  images: string[];
+  featured: boolean;
+  active: boolean;
+  ingredients: string | null;
+  usage: string | null;
+  categoryId: string;
+}
+
+interface CategoryOption {
+  id: string;
+  name: string;
+}
 
 interface ProductFormProps {
-  product?: Product & { category: Category };
-  categories: Category[];
+  product?: ProductFormData;
+  categories: CategoryOption[];
 }
 
 export function ProductForm({ product, categories }: ProductFormProps) {
@@ -18,7 +36,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
   const [success, setSuccess] = useState(false);
   const formRef = useRef<HTMLFormElement>(null);
   const [imageUrls, setImageUrls] = useState<string[]>(
-    product ? parseImages(product.images as unknown as string) : []
+    product ? product.images : []
   );
   const [newUrl, setNewUrl] = useState("");
 
@@ -146,7 +164,7 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             type="number"
             step="0.01"
             min="0.01"
-            defaultValue={product ? Number(product.price) : ""}
+            defaultValue={product ? product.price : ""}
             required
             style={inputStyle}
             placeholder="99.90"

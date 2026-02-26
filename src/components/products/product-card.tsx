@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
-import { parseImages } from "@/lib/prisma";
+import { parseImages } from "@/lib/utils";
 import { ProductImage } from "@/components/ui/product-image";
 import { WishlistButton } from "@/components/products/wishlist-button";
 import type { ProductWithCategory } from "@/types";
@@ -16,7 +16,7 @@ export function ProductCard({ product }: ProductCardProps) {
   const inStock = product.stock > 0;
 
   return (
-    <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 border border-[rgba(201,162,39,0.15)] hover:border-[rgba(201,162,39,0.5)] hover:shadow-[0_0_30px_rgba(201,162,39,0.12)] hover:-translate-y-1 bg-[#0F4A37]">
+    <div className="group relative overflow-hidden rounded-2xl transition-all duration-300 border border-transparent hover:border-[rgba(201,162,39,0.4)] hover:shadow-[0_4px_20px_rgba(0,0,0,0.3)] bg-[#0F4A37]">
       {/* Image */}
       <Link href={`/products/${product.slug}`} className="block overflow-hidden">
         <div className="relative aspect-square bg-[#145A43]">
@@ -81,14 +81,14 @@ export function ProductCard({ product }: ProductCardProps) {
         </p>
         <Link href={`/products/${product.slug}`}>
           <h3
-            className="font-serif font-semibold text-base leading-snug line-clamp-2 mb-3 transition-colors duration-200 group-hover:text-[#C9A227]"
+            className="font-serif font-semibold text-lg leading-snug line-clamp-2 mb-3 transition-colors duration-200 group-hover:text-[#C9A227]"
             style={{ color: "#F5F0E6" }}
           >
             {product.name}
           </h3>
         </Link>
         <div className="flex items-center justify-between">
-          <span className="font-bold text-lg" style={{ color: "#C9A227" }}>
+          <span className="font-medium text-base" style={{ color: "#C9A227" }}>
             {formatPrice(Number(product.price))}
           </span>
           {inStock && (

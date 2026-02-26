@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { HeroSection } from "@/components/home/hero-section";
 import { BestSellers } from "@/components/home/best-sellers";
+import { CategoryCards } from "@/components/home/category-cards";
 import { LuminaHighlight } from "@/components/home/lumina-highlight";
 import { NossaHistoriaTeaser } from "@/components/home/nossa-historia-teaser";
 import { WhyAltheia } from "@/components/home/why-altheia";
@@ -26,7 +27,13 @@ export default async function HomePage() {
       <HeroSection
         title={settings.heroTitle}
         subtitle={settings.heroSubtitle}
+        heroImageUrl={settings.heroImageUrl}
+        heroVideoUrl={settings.heroVideoUrl}
       />
+
+      <Suspense fallback={<div className="h-48 animate-pulse" style={{ backgroundColor: "#0A3D2F" }} />}>
+        <CategoryCards />
+      </Suspense>
 
       <Suspense fallback={<div className="h-96 animate-pulse" style={{ backgroundColor: "#0A3D2F" }} />}>
         <BestSellers />

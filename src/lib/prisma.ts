@@ -45,18 +45,3 @@ export const prisma: PrismaClientSingleton =
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
-
-/** Converte array de imagens para JSON string (para salvar no banco) */
-export function stringifyImages(images: string[]): string {
-  return JSON.stringify(images);
-}
-
-/** Parseia o campo images do banco → string[] */
-export function parseImages(images: string): string[] {
-  try {
-    const parsed = JSON.parse(images);
-    return Array.isArray(parsed) ? parsed : [];
-  } catch {
-    return [];
-  }
-}

@@ -3,77 +3,100 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import { ArrowRight, Sparkles } from "lucide-react";
+import Image from "next/image";
 import { GoldButton } from "@/components/ui/gold-button";
-import { staggerContainer, fadeInUp, scaleIn } from "@/lib/animations";
-
-const particles = [
-  { size: 4, top: "15%", left: "10%", duration: 6, delay: 0 },
-  { size: 6, top: "25%", left: "85%", duration: 8, delay: 1 },
-  { size: 3, top: "70%", left: "15%", duration: 7, delay: 2 },
-  { size: 5, top: "60%", left: "90%", duration: 9, delay: 0.5 },
-  { size: 4, top: "40%", left: "5%", duration: 6.5, delay: 3 },
-  { size: 3, top: "80%", left: "75%", duration: 7.5, delay: 1.5 },
-  { size: 6, top: "10%", left: "55%", duration: 8.5, delay: 2.5 },
-  { size: 4, top: "50%", left: "95%", duration: 6, delay: 4 },
-];
+import { staggerContainer, fadeInUp } from "@/lib/animations";
 
 interface HeroSectionProps {
   title?: string;
   subtitle?: string;
+  heroImageUrl?: string | null;
+  heroVideoUrl?: string | null;
+}
+
+/** Extrai o ID do YouTube de qualquer formato de URL e retorna a embed URL. */
+function toYouTubeEmbed(url: string): string | null {
+  try {
+    const u = new URL(url);
+    let id: string | null = null;
+
+    if (u.hostname.includes("youtu.be")) {
+      id = u.pathname.slice(1);
+    } else if (
+      u.hostname.includes("youtube.com") &&
+      u.pathname.includes("/embed/")
+    ) {
+      id = u.pathname.split("/embed/")[1]?.split("?")[0] ?? null;
+    } else if (u.hostname.includes("youtube.com")) {
+      id = u.searchParams.get("v");
+    }
+
+    if (!id) return null;
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&rel=0&playsinline=1&disablekb=1`;
+  } catch {
+    return null;
+  }
 }
 
 export function HeroSection({
   title = "A Verdade da Beleza",
   subtitle = "Cosméticos de luxo formulados com ingredientes raros para revelar a luminosidade natural da sua pele.",
+  heroImageUrl,
+  heroVideoUrl,
 }: HeroSectionProps) {
+  const embedUrl = heroVideoUrl ? toYouTubeEmbed(heroVideoUrl) : null;
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
-      {/* Background gradient */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "linear-gradient(135deg, #051F18 0%, #0A3D2F 40%, #0F4A37 70%, #0A3D2F 100%)",
-        }}
-      />
-
-      {/* Radial glow */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background:
-            "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(201,162,39,0.08) 0%, transparent 70%)",
-        }}
-      />
-
-      {/* Gold particles */}
-      {particles.map((p, i) => (
+      {/* Background — prioridade: vídeo > imagem > gradiente */}
+      {embedUrl ? (
+        <>
+          {/* iframe do YouTube como fundo em loop */}
+          <div className="absolute inset-0 w-full h-full pointer-events-none">
+            <iframe
+              src={embedUrl}
+              title="Hero background video"
+              allow="autoplay; encrypted-media"
+              className="absolute w-[300%] h-[300%] top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
+              style={{ minWidth: "100%", minHeight: "100%" }}
+            />
+          </div>
+          {/* overlay esmeralda sobre o vídeo */}
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(10,61,47,0.65)" }}
+          />
+        </>
+      ) : heroImageUrl ? (
+        <>
+          <Image
+            src={heroImageUrl}
+            alt="Hero"
+            fill
+            priority
+            className="object-cover"
+          />
+          <div
+            className="absolute inset-0"
+            style={{ backgroundColor: "rgba(10,61,47,0.60)" }}
+          />
+        </>
+      ) : (
         <div
-          key={i}
-          className="absolute rounded-full bg-[#C9A227] animate-float"
+          className="absolute inset-0"
           style={{
-            width: p.size,
-            height: p.size,
-            top: p.top,
-            left: p.left,
-            "--duration": `${p.duration}s`,
-            animationDelay: `${p.delay}s`,
-            opacity: 0.4,
-          } as React.CSSProperties}
+            background:
+              "linear-gradient(135deg, #051F18 0%, #0A3D2F 40%, #0F4A37 70%, #0A3D2F 100%)",
+          }}
         />
-      ))}
+      )}
 
-      {/* Decorative lines */}
+      {/* Radial glow sutil */}
       <div
-        className="absolute top-0 left-1/2 -translate-x-1/2 w-px h-32 opacity-30"
+        className="absolute inset-0"
         style={{
-          background: "linear-gradient(to bottom, transparent, #C9A227)",
-        }}
-      />
-      <div
-        className="absolute bottom-0 left-1/2 -translate-x-1/2 w-px h-32 opacity-30"
-        style={{
-          background: "linear-gradient(to top, transparent, #C9A227)",
+          background:
+            "radial-gradient(ellipse 70% 50% at 50% 50%, rgba(201,162,39,0.06) 0%, transparent 70%)",
         }}
       />
 
@@ -125,41 +148,18 @@ export function HeroSection({
           </GoldButton>
         </motion.div>
 
-        {/* Stats */}
+        {/* Linha dourada fina */}
         <motion.div
           variants={fadeInUp}
-          className="mt-16 grid grid-cols-3 gap-8 max-w-md mx-auto"
-        >
-          {[
-            { value: "10+", label: "Anos de pesquisa" },
-            { value: "100%", label: "Natural & Vegan" },
-            { value: "50K+", label: "Clientes satisfeitas" },
-          ].map((stat) => (
-            <div key={stat.label} className="text-center">
-              <div
-                className="font-serif text-2xl font-bold"
-                style={{ color: "#C9A227" }}
-              >
-                {stat.value}
-              </div>
-              <div
-                className="text-xs mt-1 label-luxury"
-                style={{ color: "#C8BBA8" }}
-              >
-                {stat.label}
-              </div>
-            </div>
-          ))}
-        </motion.div>
+          className="mt-12 h-px max-w-xs mx-auto"
+          style={{ backgroundColor: "rgba(201,162,39,0.30)" }}
+        />
       </motion.div>
 
       {/* Bottom fade */}
       <div
         className="absolute bottom-0 left-0 right-0 h-32"
-        style={{
-          background:
-            "linear-gradient(to top, #0A3D2F, transparent)",
-        }}
+        style={{ background: "linear-gradient(to top, #0A3D2F, transparent)" }}
       />
 
       {/* Scroll indicator */}

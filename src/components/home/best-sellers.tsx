@@ -12,26 +12,35 @@ export async function BestSellers() {
   if (display.length === 0) return null;
 
   return (
-    <section className="py-24 px-4" style={{ backgroundColor: "#0A3D2F" }}>
+    <section
+      className="py-24 px-4"
+      style={{
+        backgroundColor: "#0A3D2F",
+        borderTop: "1px solid rgba(201,162,39,0.15)",
+      }}
+    >
       <div className="container mx-auto max-w-7xl">
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12">
+        <div className="mb-12">
           <SectionTitle
             label="Mais Vendidos"
             title="Nossos Best Sellers"
             subtitle="Produtos escolhidos por milhares de mulheres que confiam na Altheia."
             align="left"
           />
-          <GoldButton variant="outline" size="md" asChild>
-            <Link href="/products">
-              Ver todos <ArrowRight className="h-4 w-4 ml-1" />
-            </Link>
-          </GoldButton>
         </div>
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
           {display.map((product) => (
             <ProductCard key={product.id} product={product} />
           ))}
+        </div>
+
+        <div className="flex justify-center mt-8">
+          <GoldButton variant="outline" size="md" asChild>
+            <Link href="/products">
+              Ver todos <ArrowRight className="h-4 w-4 ml-1" />
+            </Link>
+          </GoldButton>
         </div>
       </div>
     </section>
