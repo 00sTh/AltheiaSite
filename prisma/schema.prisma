@@ -3,17 +3,14 @@ generator client {
 }
 
 // ============================================================
-// ATENÇÃO: SQLite para desenvolvimento local (DEMO_MODE)
-// Para produção com Neon/PostgreSQL:
-//   - Trocar provider para "postgresql"
-//   - Adicionar directUrl = env("DIRECT_URL")
-//   - Trocar price Float → Decimal @db.Decimal(10, 2)
-//   - Trocar images String → String[]
-//   - Restaurar enum OrderStatus { ... }
+// Suporta SQLite (dev/demo) e PostgreSQL (produção Neon).
+// Para dev local: DATABASE_URL="file:./prisma/demo.db" (DEMO_MODE=true)
+// Para produção:  DATABASE_URL=postgresql://... + DIRECT_URL=postgresql://...
 // ============================================================
 datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 /// Usuários do sistema com login próprio (auth sem Clerk)
