@@ -7,6 +7,7 @@ import { stringifyImages } from "@/lib/utils";
 import { getServerAuth } from "@/lib/auth";
 import { uploadImage, deleteImage } from "@/lib/blob";
 import { z } from "zod";
+import { Prisma } from "@prisma/client";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
 
@@ -192,14 +193,22 @@ export async function createProduct(formData: FormData) {
     images = [url, ...images];
   }
 
-  const product = await prisma.product.create({
-    data: {
-      ...data,
-      images: stringifyImages(images),
-      ingredients: ingredients || null,
-      usage: usage || null,
-    },
-  });
+  let product;
+  try {
+    product = await prisma.product.create({
+      data: {
+        ...data,
+        images: stringifyImages(images),
+        ingredients: ingredients || null,
+        usage: usage || null,
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { success: false, error: "Já existe um produto com este slug." };
+    }
+    throw err;
+  }
 
   revalidatePath("/products");
   revalidatePath("/admin/products");
@@ -228,15 +237,22 @@ export async function updateProduct(id: string, formData: FormData) {
     images = [url, ...images];
   }
 
-  await prisma.product.update({
-    where: { id },
-    data: {
-      ...data,
-      images: stringifyImages(images),
-      ingredients: ingredients || null,
-      usage: usage || null,
-    },
-  });
+  try {
+    await prisma.product.update({
+      where: { id },
+      data: {
+        ...data,
+        images: stringifyImages(images),
+        ingredients: ingredients || null,
+        usage: usage || null,
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { success: false, error: "Já existe um produto com este slug." };
+    }
+    throw err;
+  }
 
   revalidatePath(`/products/${data.slug}`);
   revalidatePath("/products");
@@ -475,13 +491,20 @@ export async function createCategory(formData: FormData) {
 
   const { parentId, imageUrl: imgUrl, ...data } = parsed.data;
 
-  await prisma.category.create({
-    data: {
-      ...data,
-      imageUrl: imgUrl || null,
-      parentId: parentId || null,
-    },
-  });
+  try {
+    await prisma.category.create({
+      data: {
+        ...data,
+        imageUrl: imgUrl || null,
+        parentId: parentId || null,
+      },
+    });
+  } catch (err) {
+    if (err instanceof Prisma.PrismaClientKnownRequestError && err.code === "P2002") {
+      return { success: false, error: "Já existe uma categoria com este slug." };
+    }
+    throw err;
+  }
 
   revalidatePath("/admin/categories");
   revalidatePath("/products");

@@ -88,7 +88,21 @@ async function handleCheckoutCompleted(
 
   console.log(`✅ Pedido ${orderId} marcado como PAID`);
 
+  // Decrementar estoque dos produtos
+  const order = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: { items: true },
+  });
+  if (order?.items.length) {
+    await prisma.$transaction(
+      order.items.map((item) =>
+        prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        })
+      )
+    );
+  }
+
   // TODO: enviar e-mail de confirmação ao cliente
-  // TODO: decrementar estoque dos produtos
-  // TODO: criar registro de auditoria
 }

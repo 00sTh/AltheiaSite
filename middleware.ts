@@ -42,26 +42,36 @@ function isAuthPath(pathname: string): boolean {
   );
 }
 
+function withSecurityHeaders(res: NextResponse): NextResponse {
+  res.headers.set("X-Content-Type-Options", "nosniff");
+  res.headers.set("X-Frame-Options", "SAMEORIGIN");
+  res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.headers.set("X-XSS-Protection", "1; mode=block");
+  return res;
+}
+
 function demoMiddleware(req: NextRequest): NextResponse {
   const { pathname } = req.nextUrl;
 
   // Sempre permite arquivos estáticos e auth pages
-  if (isAuthPath(pathname)) return NextResponse.next();
-  if (isPublicPath(pathname)) return NextResponse.next();
+  if (isAuthPath(pathname)) return withSecurityHeaders(NextResponse.next());
+  if (isPublicPath(pathname)) return withSecurityHeaders(NextResponse.next());
 
   // Verificar presença do cookie (verificação completa é feita em server components)
   const session = req.cookies.get("site_session")?.value;
 
   if (!session) {
     if (pathname.startsWith("/admin")) {
-      return NextResponse.redirect(new URL("/admin/login", req.url));
+      return withSecurityHeaders(NextResponse.redirect(new URL("/admin/login", req.url)));
     }
-    return NextResponse.redirect(
-      new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, req.url)
+    return withSecurityHeaders(
+      NextResponse.redirect(
+        new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, req.url)
+      )
     );
   }
 
-  return NextResponse.next();
+  return withSecurityHeaders(NextResponse.next());
 }
 
 async function clerkMiddleware(req: NextRequest) {
@@ -103,7 +113,7 @@ async function clerkMiddleware(req: NextRequest) {
       );
     }
 
-    return NextResponse.next();
+    return withSecurityHeaders(NextResponse.next());
   });
 
   return handler(req, {} as never);
