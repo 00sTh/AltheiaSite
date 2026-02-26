@@ -1,24 +1,43 @@
-import { Truck, RotateCcw, ShieldCheck } from "lucide-react";
+import { Truck, RotateCcw, ShieldCheck, Star, Heart, Package, Leaf, Sparkles, Shield } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
 
-const benefits = [
-  {
-    icon: Truck,
-    title: "Frete grátis acima de R$199",
-    description: "Entrega em todo o Brasil sem custo adicional.",
-  },
-  {
-    icon: RotateCcw,
-    title: "Devolução em 30 dias",
-    description: "Satisfação garantida ou seu dinheiro de volta.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Pagamento seguro",
-    description: "Transações criptografadas e dados protegidos.",
-  },
-];
+const iconMap: Record<string, LucideIcon> = {
+  Truck, RotateCcw, ShieldCheck, Star, Heart, Package, Leaf, Sparkles, Shield,
+};
 
-export function WhyAltheia() {
+function getIcon(name: string): LucideIcon {
+  return iconMap[name] ?? ShieldCheck;
+}
+
+interface WhyAltheiaProps {
+  benefit1Icon?: string;
+  benefit1Title?: string;
+  benefit1Text?: string;
+  benefit2Icon?: string;
+  benefit2Title?: string;
+  benefit2Text?: string;
+  benefit3Icon?: string;
+  benefit3Title?: string;
+  benefit3Text?: string;
+}
+
+export function WhyAltheia({
+  benefit1Icon = "Truck",
+  benefit1Title = "Frete grátis acima de R$199",
+  benefit1Text = "Entrega em todo o Brasil sem custo adicional.",
+  benefit2Icon = "RotateCcw",
+  benefit2Title = "Devolução em 30 dias",
+  benefit2Text = "Satisfação garantida ou seu dinheiro de volta.",
+  benefit3Icon = "ShieldCheck",
+  benefit3Title = "Pagamento seguro",
+  benefit3Text = "Transações criptografadas e dados protegidos.",
+}: WhyAltheiaProps) {
+  const benefits = [
+    { icon: getIcon(benefit1Icon), title: benefit1Title, description: benefit1Text },
+    { icon: getIcon(benefit2Icon), title: benefit2Title, description: benefit2Text },
+    { icon: getIcon(benefit3Icon), title: benefit3Title, description: benefit3Text },
+  ];
+
   return (
     <section
       className="py-8 px-4"
@@ -33,10 +52,7 @@ export function WhyAltheia() {
             <div key={title} className="flex items-start gap-4 px-8 py-6">
               <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: "#C9A227" }} />
               <div>
-                <p
-                  className="font-medium text-sm mb-1"
-                  style={{ color: "#F5F0E6" }}
-                >
+                <p className="font-medium text-sm mb-1" style={{ color: "#F5F0E6" }}>
                   {title}
                 </p>
                 <p className="text-xs leading-relaxed" style={{ color: "#C8BBA8" }}>

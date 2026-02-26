@@ -8,6 +8,7 @@ import {
   Settings,
   Mail,
   Image,
+  Tag,
   ChevronRight,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
@@ -15,6 +16,7 @@ import { APP_NAME } from "@/lib/constants";
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Produtos", icon: Package },
+  { href: "/admin/categories", label: "Categorias", icon: Tag },
   { href: "/admin/media", label: "Mídia", icon: Image },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/settings", label: "Configurações", icon: Settings },

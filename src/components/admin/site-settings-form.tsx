@@ -320,6 +320,65 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
         </div>
       </div>
 
+      {/* WhatsApp */}
+      <div>
+        {sectionTitle("WhatsApp (Contato / Checkout)")}
+        <div>
+          <label style={labelStyle}>Número do WhatsApp (com DDI e DDD, sem +)</label>
+          <input
+            name="whatsappNumber"
+            defaultValue={settings.whatsappNumber}
+            style={inputStyle}
+            placeholder="5511999999999"
+          />
+          {hint("Ex: 5511999999999 — usado no checkout sem pagamento para finalizar via WhatsApp.")}
+        </div>
+      </div>
+
+      {/* WhyAltheia */}
+      <div>
+        {sectionTitle("Por que Althéia? (Barra de Benefícios)")}
+        <div className="space-y-6">
+          {([1, 2, 3] as const).map((n) => (
+            <div key={n} className="rounded-xl p-4" style={{ border: "1px solid rgba(201,162,39,0.15)", backgroundColor: "rgba(15,74,55,0.3)" }}>
+              <p className="text-xs font-semibold mb-3" style={{ color: "#C9A227", textTransform: "uppercase", letterSpacing: "0.08em" }}>
+                Benefício {n}
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                <div>
+                  <label style={labelStyle}>Ícone (nome Lucide)</label>
+                  <input
+                    name={`benefit${n}Icon`}
+                    defaultValue={(settings as Record<string, unknown>)[`benefit${n}Icon`] as string ?? ""}
+                    style={inputStyle}
+                    placeholder="Truck"
+                  />
+                  {hint("Truck · RotateCcw · ShieldCheck · Star · Heart · Package · Leaf · Sparkles · Shield")}
+                </div>
+                <div>
+                  <label style={labelStyle}>Título</label>
+                  <input
+                    name={`benefit${n}Title`}
+                    defaultValue={(settings as Record<string, unknown>)[`benefit${n}Title`] as string ?? ""}
+                    style={inputStyle}
+                    placeholder="Frete grátis acima de R$199"
+                  />
+                </div>
+                <div>
+                  <label style={labelStyle}>Texto</label>
+                  <input
+                    name={`benefit${n}Text`}
+                    defaultValue={(settings as Record<string, unknown>)[`benefit${n}Text`] as string ?? ""}
+                    style={inputStyle}
+                    placeholder="Entrega em todo o Brasil sem custo adicional."
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
       {/* Newsletter */}
       <div>
         {sectionTitle("Newsletter")}

@@ -57,7 +57,17 @@ export default async function HomePage() {
         videoDesc={settings.featuredVideoDesc}
       />
 
-      <WhyAltheia />
+      <WhyAltheia
+        benefit1Icon={settings.benefit1Icon}
+        benefit1Title={settings.benefit1Title}
+        benefit1Text={settings.benefit1Text}
+        benefit2Icon={settings.benefit2Icon}
+        benefit2Title={settings.benefit2Title}
+        benefit2Text={settings.benefit2Text}
+        benefit3Icon={settings.benefit3Icon}
+        benefit3Title={settings.benefit3Title}
+        benefit3Text={settings.benefit3Text}
+      />
     </>
   );
 }

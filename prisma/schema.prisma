@@ -118,6 +118,13 @@ model Order {
   price           Float
   stripePaymentId String?
   stripeSessionId String?
+  // Dados do comprador / entrega
+  customerName    String?
+  customerEmail   String?
+  customerPhone   String?
+  /// JSON: { street, number, complement, city, state, zip }
+  shippingAddress String?
+  notes           String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @updatedAt
 
@@ -149,6 +156,8 @@ model SiteSettings {
   id                   String   @id @default("default")
   // Navbar
   siteLogoUrl          String?
+  // Contato / WhatsApp
+  whatsappNumber       String   @default("5511999999999")
   // Hero
   heroTitle            String   @default("Descubra a Verdade da Beleza")
   heroSubtitle         String   @default("Cosméticos de luxo formulados com a pureza da ciência e da natureza")
@@ -176,6 +185,18 @@ model SiteSettings {
   instagramUrl         String?
   youtubeUrl           String?
   twitterUrl           String?
+  // WhyAltheia (benefícios editáveis)
+  whyTitle             String   @default("Por que Althéia?")
+  whySubtitle          String   @default("Qualidade, luxo e eficácia em cada produto.")
+  benefit1Icon         String   @default("Truck")
+  benefit1Title        String   @default("Frete grátis acima de R$199")
+  benefit1Text         String   @default("Entrega em todo o Brasil sem custo adicional.")
+  benefit2Icon         String   @default("RotateCcw")
+  benefit2Title        String   @default("Devolução em 30 dias")
+  benefit2Text         String   @default("Satisfação garantida ou seu dinheiro de volta.")
+  benefit3Icon         String   @default("ShieldCheck")
+  benefit3Title        String   @default("Pagamento seguro")
+  benefit3Text         String   @default("Transações criptografadas e dados protegidos.")
   // Newsletter
   newsletterTitle      String   @default("Receba Novidades Exclusivas")
   newsletterSubtitle   String   @default("Cadastre-se e ganhe 10% de desconto na primeira compra")

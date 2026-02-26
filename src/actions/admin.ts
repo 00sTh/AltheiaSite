@@ -69,6 +69,19 @@ const siteSettingsSchema = z.object({
   metaTitle: z.string().max(70).optional().or(z.literal("")),
   metaDescription: z.string().max(160).optional().or(z.literal("")),
   shippingFreeThreshold: z.coerce.number().min(0),
+  whatsappNumber: z.string().max(20).optional().or(z.literal("")),
+  // WhyAltheia
+  whyTitle: z.string().max(200).optional().or(z.literal("")),
+  whySubtitle: z.string().max(500).optional().or(z.literal("")),
+  benefit1Icon: z.string().max(50).optional().or(z.literal("")),
+  benefit1Title: z.string().max(200).optional().or(z.literal("")),
+  benefit1Text: z.string().max(500).optional().or(z.literal("")),
+  benefit2Icon: z.string().max(50).optional().or(z.literal("")),
+  benefit2Title: z.string().max(200).optional().or(z.literal("")),
+  benefit2Text: z.string().max(500).optional().or(z.literal("")),
+  benefit3Icon: z.string().max(50).optional().or(z.literal("")),
+  benefit3Title: z.string().max(200).optional().or(z.literal("")),
+  benefit3Text: z.string().max(500).optional().or(z.literal("")),
 });
 
 export async function updateSiteSettings(formData: FormData) {
@@ -420,4 +433,99 @@ export async function getMediaAssets(type?: "IMAGE" | "VIDEO") {
     where: type ? { type } : undefined,
     orderBy: { createdAt: "desc" },
   });
+}
+
+// ─── Categories ───────────────────────────────────────────────────────────────
+
+const categorySchema = z.object({
+  name: z.string().min(2).max(100),
+  slug: z
+    .string()
+    .min(2)
+    .max(100)
+    .regex(/^[a-z0-9-]+$/),
+  imageUrl: imageUrl,
+  parentId: z.string().uuid().optional().or(z.literal("")),
+});
+
+export async function getAdminCategories() {
+  await requireAdmin();
+  return prisma.category.findMany({
+    include: {
+      _count: { select: { products: true } },
+      parent: { select: { name: true } },
+    },
+    orderBy: { name: "asc" },
+  });
+}
+
+export async function getAdminCategory(id: string) {
+  await requireAdmin();
+  return prisma.category.findUnique({ where: { id } });
+}
+
+export async function createCategory(formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = categorySchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { parentId, imageUrl: imgUrl, ...data } = parsed.data;
+
+  await prisma.category.create({
+    data: {
+      ...data,
+      imageUrl: imgUrl || null,
+      parentId: parentId || null,
+    },
+  });
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/products");
+  return { success: true };
+}
+
+export async function updateCategory(id: string, formData: FormData) {
+  await requireAdmin();
+
+  const raw = Object.fromEntries(formData.entries());
+  const parsed = categorySchema.safeParse(raw);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.issues[0].message };
+  }
+
+  const { parentId, imageUrl: imgUrl, ...data } = parsed.data;
+
+  await prisma.category.update({
+    where: { id },
+    data: {
+      ...data,
+      imageUrl: imgUrl || null,
+      parentId: parentId || null,
+    },
+  });
+
+  revalidatePath("/admin/categories");
+  revalidatePath("/products");
+  return { success: true };
+}
+
+export async function deleteCategory(id: string) {
+  await requireAdmin();
+
+  const productCount = await prisma.product.count({ where: { categoryId: id } });
+  if (productCount > 0) {
+    return {
+      success: false,
+      error: `Esta categoria tem ${productCount} produto(s). Mova ou delete os produtos antes.`,
+    };
+  }
+
+  await prisma.category.delete({ where: { id } });
+  revalidatePath("/admin/categories");
+  revalidatePath("/products");
+  return { success: true };
 }
