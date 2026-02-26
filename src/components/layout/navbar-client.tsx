@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ShoppingCart, User, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
@@ -16,9 +17,10 @@ const navLinks = [
 interface NavbarClientProps {
   userId: string | null;
   cartCount: number;
+  siteLogoUrl: string | null;
 }
 
-export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
+export function NavbarClient({ userId, cartCount, siteLogoUrl }: NavbarClientProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -66,14 +68,30 @@ export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
         {/* Centro — logo absoluto */}
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 font-serif font-bold tracking-[0.22em] uppercase transition-colors duration-300 hover:text-[#C9A227] select-none"
-          style={{
-            color: "#F5F0E6",
-            fontSize: "clamp(1.1rem, 2vw, 1.5rem)",
-            textShadow: "0 0 30px rgba(201,162,39,0.15)",
-          }}
+          className="absolute left-1/2 -translate-x-1/2 select-none"
+          aria-label="Ir para início"
         >
-          {APP_NAME}
+          {siteLogoUrl ? (
+            <Image
+              src={siteLogoUrl}
+              alt={APP_NAME}
+              width={140}
+              height={42}
+              className="object-contain h-10 w-auto"
+              priority
+            />
+          ) : (
+            <span
+              className="font-serif font-bold tracking-[0.22em] uppercase transition-colors duration-300 hover:text-[#C9A227]"
+              style={{
+                color: "#F5F0E6",
+                fontSize: "clamp(1.1rem, 2vw, 1.5rem)",
+                textShadow: "0 0 30px rgba(201,162,39,0.15)",
+              }}
+            >
+              {APP_NAME}
+            </span>
+          )}
         </Link>
 
         {/* Direita — ícones de ação */}

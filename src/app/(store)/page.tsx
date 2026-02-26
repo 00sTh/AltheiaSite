@@ -42,7 +42,14 @@ export default async function HomePage() {
         <BestSellers />
       </Suspense>
 
-      <LuminaHighlight />
+      <LuminaHighlight
+        label={settings.luminaLabel}
+        title={settings.luminaTitle}
+        subtitle={settings.luminaSubtitle}
+        imageUrl={settings.luminaImageUrl}
+        badgeText={settings.luminaBadgeText}
+        productLink={settings.luminaProductLink}
+      />
 
       <NossaHistoriaTeaser
         videoUrl={settings.featuredVideoUrl ?? undefined}

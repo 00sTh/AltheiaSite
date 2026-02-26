@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { stringifyImages } from "@/lib/utils";
 import { getServerAuth } from "@/lib/auth";
-import { uploadImage } from "@/lib/blob";
+import { uploadImage, deleteImage } from "@/lib/blob";
 import { z } from "zod";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
@@ -28,6 +28,7 @@ export async function getSiteSettings() {
 }
 
 const siteSettingsSchema = z.object({
+  siteLogoUrl: z.string().url().optional().or(z.literal("")),
   heroTitle: z.string().min(1).max(200),
   heroSubtitle: z.string().min(1).max(500),
   heroImageUrl: z.string().url().optional().or(z.literal("")),
@@ -35,6 +36,12 @@ const siteSettingsSchema = z.object({
   leftVideoUrl: z.string().url().optional().or(z.literal("")),
   rightVideoUrl: z.string().url().optional().or(z.literal("")),
   heroLogoUrl: z.string().url().optional().or(z.literal("")),
+  luminaLabel: z.string().max(100).optional().or(z.literal("")),
+  luminaTitle: z.string().max(200).optional().or(z.literal("")),
+  luminaSubtitle: z.string().max(1000).optional().or(z.literal("")),
+  luminaImageUrl: z.string().url().optional().or(z.literal("")),
+  luminaBadgeText: z.string().max(50).optional().or(z.literal("")),
+  luminaProductLink: z.string().max(200).optional().or(z.literal("")),
   aboutTitle: z.string().min(1).max(200),
   aboutText: z.string().min(1).max(5000),
   aboutImageUrl: z.string().url().optional().or(z.literal("")),
@@ -63,38 +70,44 @@ export async function updateSiteSettings(formData: FormData) {
 
   const data = parsed.data;
 
+  const nullable = (v: string | undefined) => v || null;
+
   await prisma.siteSettings.upsert({
     where: { id: "default" },
     create: {
       id: "default",
       ...data,
-      heroImageUrl: data.heroImageUrl || null,
-      heroVideoUrl: data.heroVideoUrl || null,
-      leftVideoUrl: data.leftVideoUrl || null,
-      rightVideoUrl: data.rightVideoUrl || null,
-      heroLogoUrl: data.heroLogoUrl || null,
-      aboutImageUrl: data.aboutImageUrl || null,
-      featuredVideoUrl: data.featuredVideoUrl || null,
-      instagramUrl: data.instagramUrl || null,
-      youtubeUrl: data.youtubeUrl || null,
-      twitterUrl: data.twitterUrl || null,
-      metaTitle: data.metaTitle || null,
-      metaDescription: data.metaDescription || null,
+      siteLogoUrl: nullable(data.siteLogoUrl),
+      heroImageUrl: nullable(data.heroImageUrl),
+      heroVideoUrl: nullable(data.heroVideoUrl),
+      leftVideoUrl: nullable(data.leftVideoUrl),
+      rightVideoUrl: nullable(data.rightVideoUrl),
+      heroLogoUrl: nullable(data.heroLogoUrl),
+      luminaImageUrl: nullable(data.luminaImageUrl),
+      aboutImageUrl: nullable(data.aboutImageUrl),
+      featuredVideoUrl: nullable(data.featuredVideoUrl),
+      instagramUrl: nullable(data.instagramUrl),
+      youtubeUrl: nullable(data.youtubeUrl),
+      twitterUrl: nullable(data.twitterUrl),
+      metaTitle: nullable(data.metaTitle),
+      metaDescription: nullable(data.metaDescription),
     },
     update: {
       ...data,
-      heroImageUrl: data.heroImageUrl || null,
-      heroVideoUrl: data.heroVideoUrl || null,
-      leftVideoUrl: data.leftVideoUrl || null,
-      rightVideoUrl: data.rightVideoUrl || null,
-      heroLogoUrl: data.heroLogoUrl || null,
-      aboutImageUrl: data.aboutImageUrl || null,
-      featuredVideoUrl: data.featuredVideoUrl || null,
-      instagramUrl: data.instagramUrl || null,
-      youtubeUrl: data.youtubeUrl || null,
-      twitterUrl: data.twitterUrl || null,
-      metaTitle: data.metaTitle || null,
-      metaDescription: data.metaDescription || null,
+      siteLogoUrl: nullable(data.siteLogoUrl),
+      heroImageUrl: nullable(data.heroImageUrl),
+      heroVideoUrl: nullable(data.heroVideoUrl),
+      leftVideoUrl: nullable(data.leftVideoUrl),
+      rightVideoUrl: nullable(data.rightVideoUrl),
+      heroLogoUrl: nullable(data.heroLogoUrl),
+      luminaImageUrl: nullable(data.luminaImageUrl),
+      aboutImageUrl: nullable(data.aboutImageUrl),
+      featuredVideoUrl: nullable(data.featuredVideoUrl),
+      instagramUrl: nullable(data.instagramUrl),
+      youtubeUrl: nullable(data.youtubeUrl),
+      twitterUrl: nullable(data.twitterUrl),
+      metaTitle: nullable(data.metaTitle),
+      metaDescription: nullable(data.metaDescription),
     },
   });
 
@@ -205,6 +218,7 @@ export async function updateProduct(id: string, formData: FormData) {
   return { success: true };
 }
 
+/** Soft delete — desativa o produto (continua no banco) */
 export async function deleteProduct(id: string) {
   await requireAdmin();
 
@@ -215,6 +229,32 @@ export async function deleteProduct(id: string) {
 
   revalidatePath("/products");
   revalidatePath("/admin/products");
+  return { success: true };
+}
+
+/** Hard delete — remove permanentemente */
+export async function hardDeleteProduct(id: string) {
+  await requireAdmin();
+
+  await prisma.product.delete({ where: { id } });
+
+  revalidatePath("/products");
+  revalidatePath("/admin/products");
+  return { success: true };
+}
+
+/** Alterna o flag featured do produto */
+export async function toggleProductFeatured(id: string, featured: boolean) {
+  await requireAdmin();
+
+  await prisma.product.update({
+    where: { id },
+    data: { featured },
+  });
+
+  revalidatePath("/products");
+  revalidatePath("/admin/products");
+  revalidatePath("/");
   return { success: true };
 }
 
@@ -284,6 +324,69 @@ export async function getAdminOrder(id: string) {
 export async function getNewsletterSubscribers() {
   await requireAdmin();
   return prisma.newsletterSubscriber.findMany({
+    orderBy: { createdAt: "desc" },
+  });
+}
+
+// ─── Media Assets ─────────────────────────────────────────────────────────────
+
+export async function createMediaAsset(formData: FormData) {
+  await requireAdmin();
+
+  const type = (formData.get("type") as string) || "IMAGE";
+  const name = (formData.get("name") as string) || "";
+
+  if (type === "VIDEO") {
+    const url = formData.get("url") as string;
+    if (!url) return { success: false, error: "URL obrigatória para vídeo" };
+    const asset = await prisma.mediaAsset.create({
+      data: { name: name || url, url, type: "VIDEO" },
+    });
+    revalidatePath("/admin/media");
+    return { success: true, id: asset.id, url: asset.url };
+  }
+
+  // IMAGE upload
+  const file = formData.get("file") as File | null;
+  if (!file || file.size === 0) return { success: false, error: "Arquivo obrigatório" };
+
+  const ext = file.name.split(".").pop() ?? "jpg";
+  const filename = `media-${Date.now()}.${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  const { url } = await uploadImage(buffer, filename);
+
+  const asset = await prisma.mediaAsset.create({
+    data: {
+      name: name || file.name,
+      url,
+      type: "IMAGE",
+      size: file.size,
+    },
+  });
+
+  revalidatePath("/admin/media");
+  return { success: true, id: asset.id, url: asset.url };
+}
+
+export async function deleteMediaAsset(id: string) {
+  await requireAdmin();
+
+  const asset = await prisma.mediaAsset.findUnique({ where: { id } });
+  if (!asset) return { success: false, error: "Asset não encontrado" };
+
+  if (asset.type === "IMAGE" && asset.url.startsWith("/uploads/")) {
+    await deleteImage(asset.url.slice(1)); // remove leading /
+  }
+
+  await prisma.mediaAsset.delete({ where: { id } });
+  revalidatePath("/admin/media");
+  return { success: true };
+}
+
+export async function getMediaAssets(type?: "IMAGE" | "VIDEO") {
+  await requireAdmin();
+  return prisma.mediaAsset.findMany({
+    where: type ? { type } : undefined,
     orderBy: { createdAt: "desc" },
   });
 }

@@ -7,12 +7,15 @@ import {
   ShoppingCart,
   Settings,
   Mail,
+  Image,
   ChevronRight,
 } from "lucide-react";
+import { APP_NAME } from "@/lib/constants";
 
 const navItems = [
   { href: "/admin", label: "Dashboard", icon: LayoutDashboard },
   { href: "/admin/products", label: "Produtos", icon: Package },
+  { href: "/admin/media", label: "Mídia", icon: Image },
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/settings", label: "Configurações", icon: Settings },
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
@@ -45,10 +48,10 @@ export default async function AdminLayout({
         <div className="mb-8 px-2">
           <Link href="/" className="flex flex-col">
             <span
-              className="font-serif text-xl font-bold"
+              className="font-serif text-xl font-bold tracking-[0.12em] uppercase"
               style={{ color: "#C9A227" }}
             >
-              ALTHEIA
+              {APP_NAME}
             </span>
             <span className="text-xs tracking-widest uppercase" style={{ color: "rgba(200,187,168,0.5)" }}>
               Admin Panel

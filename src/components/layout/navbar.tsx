@@ -12,10 +12,14 @@ async function getNavData() {
     });
     cartCount = cart?.items.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
   }
-  return { userId, cartCount };
+
+  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
+  const siteLogoUrl = settings?.siteLogoUrl ?? null;
+
+  return { userId, cartCount, siteLogoUrl };
 }
 
 export async function Navbar() {
-  const { userId, cartCount } = await getNavData();
-  return <NavbarClient userId={userId} cartCount={cartCount} />;
+  const { userId, cartCount, siteLogoUrl } = await getNavData();
+  return <NavbarClient userId={userId} cartCount={cartCount} siteLogoUrl={siteLogoUrl} />;
 }

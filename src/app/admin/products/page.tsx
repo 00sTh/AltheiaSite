@@ -3,6 +3,7 @@ import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, parseImages } from "@/lib/utils";
 import { Plus, Pencil, EyeOff, Eye } from "lucide-react";
+import { ProductRowActions } from "@/components/admin/product-row-actions";
 
 export const metadata: Metadata = { title: "Admin — Produtos" };
 
@@ -40,7 +41,7 @@ export default async function AdminProductsPage() {
         <table className="w-full text-sm">
           <thead>
             <tr style={{ backgroundColor: "#0F2E1E", borderBottom: "1px solid rgba(201,162,39,0.1)" }}>
-              {["Produto", "Categoria", "Preço", "Estoque", "Status", ""].map((h) => (
+              {["Produto", "Categoria", "Preço", "Estoque", "Status", "Ações"].map((h) => (
                 <th
                   key={h}
                   className="px-5 py-3 text-left text-xs font-semibold tracking-wider uppercase"
@@ -122,14 +123,21 @@ export default async function AdminProductsPage() {
                       </span>
                     </td>
                     <td className="px-5 py-4">
-                      <Link
-                        href={`/admin/products/${product.id}/edit`}
-                        className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-[#C9A227]"
-                        style={{ color: "rgba(200,187,168,0.6)" }}
-                      >
-                        <Pencil className="h-3 w-3" />
-                        Editar
-                      </Link>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
+                          className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-[#C9A227]"
+                          style={{ color: "rgba(200,187,168,0.6)" }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Editar
+                        </Link>
+                        <ProductRowActions
+                          productId={product.id}
+                          featured={product.featured}
+                          productName={product.name}
+                        />
+                      </div>
                     </td>
                   </tr>
                 );

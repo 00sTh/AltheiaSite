@@ -43,6 +43,10 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
     fontSize: "0.875rem",
   };
 
+  const hint = (text: string) => (
+    <p className="mt-1.5 text-xs" style={{ color: "rgba(200,187,168,0.4)" }}>{text}</p>
+  );
+
   const sectionTitle = (title: string) => (
     <div
       className="pb-3 mb-5 border-b"
@@ -68,6 +72,22 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
           {msg.text}
         </div>
       )}
+
+      {/* Navbar / Logo */}
+      <div>
+        {sectionTitle("Logo do Site (Navbar)")}
+        <div>
+          <label style={labelStyle}>URL do logotipo PNG transparente</label>
+          <input
+            name="siteLogoUrl"
+            type="url"
+            defaultValue={settings.siteLogoUrl ?? ""}
+            style={inputStyle}
+            placeholder="https://... (PNG com fundo transparente)"
+          />
+          {hint("Se preenchido, substitui o texto 'Althéia' na navbar e no hero. Recomendado: PNG 400×120px.")}
+        </div>
+      </div>
 
       {/* Hero Section */}
       <div>
@@ -135,9 +155,70 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
               style={inputStyle}
               placeholder="https://... (PNG com fundo transparente)"
             />
-            <p className="mt-1.5 text-xs" style={{ color: "rgba(200,187,168,0.4)" }}>
-              Se vazio, exibe o texto "Althéia" em Playfair Display. Recomendado: PNG 680×240px.
-            </p>
+            {hint("Se vazio, exibe o texto 'Althéia' em Playfair Display. Recomendado: PNG 680×240px.")}
+          </div>
+        </div>
+      </div>
+
+      {/* Lumina Highlight */}
+      <div>
+        {sectionTitle("Destaque de Produto (Lumina)")}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <label style={labelStyle}>Label (ex: Produto Estrela)</label>
+            <input
+              name="luminaLabel"
+              defaultValue={settings.luminaLabel}
+              style={inputStyle}
+              placeholder="Produto Estrela"
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Texto do badge (ex: Novo)</label>
+            <input
+              name="luminaBadgeText"
+              defaultValue={settings.luminaBadgeText}
+              style={inputStyle}
+              placeholder="Novo"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label style={labelStyle}>Título do produto</label>
+            <input
+              name="luminaTitle"
+              defaultValue={settings.luminaTitle}
+              style={inputStyle}
+              placeholder="Descubra o Lumina Sérum"
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label style={labelStyle}>Descrição</label>
+            <textarea
+              name="luminaSubtitle"
+              defaultValue={settings.luminaSubtitle}
+              rows={3}
+              style={{ ...inputStyle, resize: "vertical" }}
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>URL da imagem do produto</label>
+            <input
+              name="luminaImageUrl"
+              type="url"
+              defaultValue={settings.luminaImageUrl ?? ""}
+              style={inputStyle}
+              placeholder="https://..."
+            />
+            {hint("Se vazio, exibe um placeholder com gradiente dourado.")}
+          </div>
+          <div>
+            <label style={labelStyle}>Link do botão (ex: /products/lumina-serum)</label>
+            <input
+              name="luminaProductLink"
+              defaultValue={settings.luminaProductLink}
+              style={inputStyle}
+              placeholder="/products"
+            />
           </div>
         </div>
       </div>
@@ -277,7 +358,7 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
               maxLength={70}
               defaultValue={settings.metaTitle ?? ""}
               style={inputStyle}
-              placeholder="Altheia — A Verdade da Beleza"
+              placeholder="Althéia — A Verdade da Beleza"
             />
           </div>
           <div>

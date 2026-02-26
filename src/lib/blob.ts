@@ -1,62 +1,60 @@
 /**
  * src/lib/blob.ts — Abstração para upload de imagens
  *
- * Atualmente usa placeholder local.
- * Para produção, substituir por Vercel Blob:
+ * Desenvolvimento: salva em public/uploads/ (servido estaticamente)
+ * Produção Vercel: configure BLOB_READ_WRITE_TOKEN e descomente o bloco Vercel Blob
  *
  *   npm install @vercel/blob
- *   import { put } from "@vercel/blob";
- *
- * Adicionar ao .env.local:
  *   BLOB_READ_WRITE_TOKEN="vercel_blob_..."
  */
+
+import fs from "fs/promises";
+import path from "path";
 
 export interface UploadResult {
   url: string;
   pathname: string;
 }
 
-/**
- * Faz upload de um arquivo de imagem.
- *
- * @param file - Arquivo de imagem (Buffer ou File/Blob)
- * @param filename - Nome desejado para o arquivo
- * @returns URL pública da imagem
- *
- * @example
- * const { url } = await uploadImage(buffer, "produto-01.jpg");
- */
 export async function uploadImage(
   file: Buffer | Blob,
   filename: string
 ): Promise<UploadResult> {
-  // ── PLACEHOLDER — substituir por Vercel Blob em produção ──────────────
-  // const blob = await put(`products/${filename}`, file, {
-  //   access: "public",
-  //   contentType: "image/jpeg",
-  // });
-  // return { url: blob.url, pathname: blob.pathname };
+  // ── Vercel Blob (produção) ─────────────────────────────────────────────
+  // if (process.env.BLOB_READ_WRITE_TOKEN) {
+  //   const { put } = await import("@vercel/blob");
+  //   const blob = await put(`uploads/${filename}`, file, { access: "public" });
+  //   return { url: blob.url, pathname: blob.pathname };
+  // }
 
-  // Simulação local para desenvolvimento
-  console.warn(
-    `[blob] uploadImage chamado com "${filename}" — configure Vercel Blob para produção`
-  );
+  // ── Fallback local: public/uploads/ ───────────────────────────────────
+  const uploadsDir = path.join(process.cwd(), "public", "uploads");
+  await fs.mkdir(uploadsDir, { recursive: true });
 
-  return {
-    url: `https://images.unsplash.com/photo-1556228578-8c89e6adf883?w=600`,
-    pathname: `products/${filename}`,
-  };
+  const buffer =
+    file instanceof Buffer ? file : Buffer.from(await (file as Blob).arrayBuffer());
+
+  // Sanitize filename
+  const safe = filename.replace(/[^a-zA-Z0-9._-]/g, "-");
+  const filepath = path.join(uploadsDir, safe);
+  await fs.writeFile(filepath, buffer);
+
+  return { url: `/uploads/${safe}`, pathname: `uploads/${safe}` };
 }
 
-/**
- * Remove uma imagem pelo pathname.
- *
- * @param pathname - Caminho retornado pelo uploadImage
- */
 export async function deleteImage(pathname: string): Promise<void> {
-  // ── PLACEHOLDER ───────────────────────────────────────────────────────
-  // import { del } from "@vercel/blob";
-  // await del(pathname);
+  // ── Vercel Blob (produção) ─────────────────────────────────────────────
+  // if (process.env.BLOB_READ_WRITE_TOKEN) {
+  //   const { del } = await import("@vercel/blob");
+  //   await del(pathname);
+  //   return;
+  // }
 
-  console.warn(`[blob] deleteImage("${pathname}") — configure Vercel Blob`);
+  // ── Fallback local ─────────────────────────────────────────────────────
+  try {
+    const filepath = path.join(process.cwd(), "public", pathname);
+    await fs.unlink(filepath);
+  } catch {
+    // File may not exist
+  }
 }

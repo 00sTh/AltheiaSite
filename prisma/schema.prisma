@@ -147,6 +147,9 @@ model OrderItem {
 /// Configurações globais do site (singleton — id sempre = "default")
 model SiteSettings {
   id                   String   @id @default("default")
+  // Navbar
+  siteLogoUrl          String?
+  // Hero
   heroTitle            String   @default("Descubra a Verdade da Beleza")
   heroSubtitle         String   @default("Cosméticos de luxo formulados com a pureza da ciência e da natureza")
   heroImageUrl         String?
@@ -154,23 +157,48 @@ model SiteSettings {
   leftVideoUrl         String?
   rightVideoUrl        String?
   heroLogoUrl          String?
+  // Lumina Highlight
+  luminaLabel          String   @default("Produto Estrela")
+  luminaTitle          String   @default("Descubra o Lumina Sérum")
+  luminaSubtitle       String   @default("O sérum que redefiniu o padrão de luminosidade na skincare brasileira. Formulado com Vitamina C estabilizada e extrato de algas douradas.")
+  luminaImageUrl       String?
+  luminaBadgeText      String   @default("Novo")
+  luminaProductLink    String   @default("/products")
+  // About
   aboutTitle           String   @default("Nossa História")
   aboutText            String   @default("Nascemos da paixão por uma beleza autêntica, sustentável e eficaz. A Altheia foi criada para mulheres que buscam o melhor da natureza aliado à inovação científica.")
   aboutImageUrl        String?
+  // Videos
   featuredVideoUrl     String?
   featuredVideoTitle   String   @default("Nossa Jornada")
   featuredVideoDesc    String   @default("Conheça a história por trás de cada produto Altheia")
+  // Social
   instagramUrl         String?
   youtubeUrl           String?
   twitterUrl           String?
+  // Newsletter
   newsletterTitle      String   @default("Receba Novidades Exclusivas")
   newsletterSubtitle   String   @default("Cadastre-se e ganhe 10% de desconto na primeira compra")
+  // SEO + E-commerce
   metaTitle            String?
   metaDescription      String?
   shippingFreeThreshold Float   @default(199)
   updatedAt            DateTime @updatedAt
 
   @@map("site_settings")
+}
+
+/// Banco de mídia (imagens e vídeos)
+model MediaAsset {
+  id        String   @id @default(uuid())
+  name      String
+  url       String
+  /// IMAGE | VIDEO
+  type      String   @default("IMAGE")
+  size      Int?
+  createdAt DateTime @default(now())
+
+  @@map("media_assets")
 }
 
 /// Lista de desejos do usuário

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { ArrowRight, Droplets, Leaf, Star } from "lucide-react";
 import { GoldButton } from "@/components/ui/gold-button";
@@ -13,7 +14,23 @@ const benefits = [
   { icon: Star, label: "Premiado", desc: "Melhor sérum 2025 – Beauty Awards" },
 ];
 
-export function LuminaHighlight() {
+interface LuminaHighlightProps {
+  label?: string;
+  title?: string;
+  subtitle?: string;
+  imageUrl?: string | null;
+  badgeText?: string;
+  productLink?: string;
+}
+
+export function LuminaHighlight({
+  label = "Produto Estrela",
+  title = "Descubra o Lumina Sérum",
+  subtitle = "O sérum que redefiniu o padrão de luminosidade na skincare brasileira. Formulado com Vitamina C estabilizada e extrato de algas douradas.",
+  imageUrl,
+  badgeText = "Novo",
+  productLink = "/products",
+}: LuminaHighlightProps) {
   return (
     <section
       className="py-24 px-4 overflow-hidden"
@@ -46,36 +63,48 @@ export function LuminaHighlight() {
                 }}
               />
 
-              {/* Placeholder product visual */}
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center">
-                  <div
-                    className="w-24 h-40 mx-auto rounded-2xl mb-4"
-                    style={{
-                      background:
-                        "linear-gradient(160deg, rgba(201,162,39,0.3) 0%, rgba(201,162,39,0.1) 100%)",
-                      border: "1px solid rgba(201,162,39,0.4)",
-                    }}
-                  />
-                  <p
-                    className="font-serif text-xl italic"
-                    style={{ color: "#C9A227" }}
-                  >
-                    Lumina Sérum
-                  </p>
+              {/* Product visual */}
+              {imageUrl ? (
+                <Image
+                  src={imageUrl}
+                  alt={title}
+                  fill
+                  className="object-cover"
+                  sizes="(max-width: 768px) 100vw, 50vw"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center">
+                    <div
+                      className="w-24 h-40 mx-auto rounded-2xl mb-4"
+                      style={{
+                        background:
+                          "linear-gradient(160deg, rgba(201,162,39,0.3) 0%, rgba(201,162,39,0.1) 100%)",
+                        border: "1px solid rgba(201,162,39,0.4)",
+                      }}
+                    />
+                    <p
+                      className="font-serif text-xl italic"
+                      style={{ color: "#C9A227" }}
+                    >
+                      {title}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
 
               {/* Badge */}
-              <div
-                className="absolute top-6 right-6 px-3 py-1.5 rounded-full text-xs font-semibold"
-                style={{
-                  backgroundColor: "#C9A227",
-                  color: "#0A3D2F",
-                }}
-              >
-                Novo
-              </div>
+              {badgeText && (
+                <div
+                  className="absolute top-6 right-6 px-3 py-1.5 rounded-full text-xs font-semibold"
+                  style={{
+                    backgroundColor: "#C9A227",
+                    color: "#0A3D2F",
+                  }}
+                >
+                  {badgeText}
+                </div>
+              )}
             </div>
 
             {/* Decorative circle */}
@@ -96,17 +125,17 @@ export function LuminaHighlight() {
             className="space-y-8"
           >
             <SectionTitle
-              label="Produto Estrela"
-              title="Descubra o Lumina Sérum"
-              subtitle="O sérum que redefiniu o padrão de luminosidade na skincare brasileira. Formulado com Vitamina C estabilizada e extrato de algas douradas."
+              label={label}
+              title={title}
+              subtitle={subtitle}
               align="left"
               animate={false}
             />
 
             {/* Benefits */}
             <div className="space-y-4">
-              {benefits.map(({ icon: Icon, label, desc }) => (
-                <div key={label} className="flex items-start gap-4">
+              {benefits.map(({ icon: Icon, label: bl, desc }) => (
+                <div key={bl} className="flex items-start gap-4">
                   <div
                     className="shrink-0 w-10 h-10 rounded-full flex items-center justify-center"
                     style={{
@@ -121,7 +150,7 @@ export function LuminaHighlight() {
                       className="font-semibold text-sm"
                       style={{ color: "#F5F0E6" }}
                     >
-                      {label}
+                      {bl}
                     </p>
                     <p className="text-sm" style={{ color: "#C8BBA8" }}>
                       {desc}
@@ -132,8 +161,8 @@ export function LuminaHighlight() {
             </div>
 
             <GoldButton variant="primary" size="lg" asChild>
-              <Link href="/products">
-                Conhecer Lumina <ArrowRight className="h-4 w-4 ml-1" />
+              <Link href={productLink}>
+                Conhecer o produto <ArrowRight className="h-4 w-4 ml-1" />
               </Link>
             </GoldButton>
           </motion.div>
