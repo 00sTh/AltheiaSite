@@ -51,7 +51,7 @@ export function MediaPickerInput({
         <input
           ref={inputRef}
           name={name}
-          type="url"
+          type="text"
           defaultValue={defaultValue ?? ""}
           placeholder={placeholder}
           onChange={handleInputChange}

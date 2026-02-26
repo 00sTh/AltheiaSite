@@ -27,30 +27,43 @@ export async function getSiteSettings() {
   });
 }
 
+// Aceita URL absoluta (https://...) OU caminho relativo (/uploads/...) OU vazio
+const imageUrl = z
+  .string()
+  .refine(
+    (v) => !v || v.startsWith("/") || /^https?:\/\//i.test(v),
+    "URL inválida: use https://... ou /uploads/..."
+  )
+  .optional()
+  .or(z.literal(""));
+
+// Aceita apenas URL absoluta (links externos, YouTube, redes sociais)
+const absUrl = z.string().url().optional().or(z.literal(""));
+
 const siteSettingsSchema = z.object({
-  siteLogoUrl: z.string().url().optional().or(z.literal("")),
+  siteLogoUrl: imageUrl,
   heroTitle: z.string().min(1).max(200),
   heroSubtitle: z.string().min(1).max(500),
-  heroImageUrl: z.string().url().optional().or(z.literal("")),
-  heroVideoUrl: z.string().url().optional().or(z.literal("")),
-  leftVideoUrl: z.string().url().optional().or(z.literal("")),
-  rightVideoUrl: z.string().url().optional().or(z.literal("")),
-  heroLogoUrl: z.string().url().optional().or(z.literal("")),
+  heroImageUrl: imageUrl,
+  heroVideoUrl: absUrl,
+  leftVideoUrl: absUrl,
+  rightVideoUrl: absUrl,
+  heroLogoUrl: imageUrl,
   luminaLabel: z.string().max(100).optional().or(z.literal("")),
   luminaTitle: z.string().max(200).optional().or(z.literal("")),
   luminaSubtitle: z.string().max(1000).optional().or(z.literal("")),
-  luminaImageUrl: z.string().url().optional().or(z.literal("")),
+  luminaImageUrl: imageUrl,
   luminaBadgeText: z.string().max(50).optional().or(z.literal("")),
   luminaProductLink: z.string().max(200).optional().or(z.literal("")),
   aboutTitle: z.string().min(1).max(200),
   aboutText: z.string().min(1).max(5000),
-  aboutImageUrl: z.string().url().optional().or(z.literal("")),
-  featuredVideoUrl: z.string().url().optional().or(z.literal("")),
+  aboutImageUrl: imageUrl,
+  featuredVideoUrl: absUrl,
   featuredVideoTitle: z.string().max(200).optional().or(z.literal("")),
   featuredVideoDesc: z.string().max(500).optional().or(z.literal("")),
-  instagramUrl: z.string().url().optional().or(z.literal("")),
-  youtubeUrl: z.string().url().optional().or(z.literal("")),
-  twitterUrl: z.string().url().optional().or(z.literal("")),
+  instagramUrl: absUrl,
+  youtubeUrl: absUrl,
+  twitterUrl: absUrl,
   newsletterTitle: z.string().max(200).optional().or(z.literal("")),
   newsletterSubtitle: z.string().max(500).optional().or(z.literal("")),
   metaTitle: z.string().max(70).optional().or(z.literal("")),
