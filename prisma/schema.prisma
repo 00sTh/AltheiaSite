@@ -118,6 +118,12 @@ model Order {
   price           Float
   stripePaymentId String?
   stripeSessionId String?
+  /// ID do pagamento na Cielo (PaymentId UUID)
+  cieloPaymentId  String?
+  /// Método de pagamento: WHATSAPP | CREDIT_CARD | PIX
+  paymentMethod   String   @default("WHATSAPP")
+  /// Código PIX copia-e-cola (quando paymentMethod=PIX)
+  pixQrCode       String?
   // Dados do comprador / entrega
   customerName    String?
   customerEmail   String?
