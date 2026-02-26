@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import { getAdminCategories, deleteCategory } from "@/actions/admin";
 import { Plus, Pencil, Trash2, Tag } from "lucide-react";
 import { CategoryDeleteButton } from "@/components/admin/category-delete-button";
@@ -69,12 +70,14 @@ export default async function AdminCategoriesPage() {
                   <td className="px-6 py-4">
                     <div className="flex items-center gap-3">
                       {cat.imageUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img
+                        <Image
                           src={cat.imageUrl}
                           alt={cat.name}
+                          width={32}
+                          height={32}
                           className="h-8 w-8 rounded-lg object-cover"
                           style={{ border: "1px solid rgba(201,162,39,0.2)" }}
+                          unoptimized
                         />
                       ) : (
                         <div

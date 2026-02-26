@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, parseImages } from "@/lib/utils";
 import { Plus, Pencil, EyeOff, Eye } from "lucide-react";
@@ -82,11 +83,13 @@ export default async function AdminProductsPage() {
                           style={{ backgroundColor: "#145A43" }}
                         >
                           {thumb && (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img
+                            <Image
                               src={thumb}
                               alt={product.name}
+                              width={40}
+                              height={40}
                               className="h-full w-full object-cover"
+                              unoptimized
                             />
                           )}
                         </div>

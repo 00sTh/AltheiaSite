@@ -37,22 +37,41 @@ export const metadata: Metadata = {
 
 const isDemoMode = process.env.DEMO_MODE === "true";
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  const content = (
+  let demoAuth: { isSignedIn: boolean; userId: string | null; userFirstName: string | null } = {
+    isSignedIn: false,
+    userId: null,
+    userFirstName: null,
+  };
+
+  if (isDemoMode) {
+    const { getSession } = await import("@/lib/session");
+    const { prisma } = await import("@/lib/prisma");
+    const userId = await getSession();
+    if (userId) {
+      const user = await prisma.siteUser.findUnique({
+        where: { id: userId, active: true },
+        select: { id: true, username: true },
+      });
+      if (user) {
+        demoAuth = { isSignedIn: true, userId: user.id, userFirstName: user.username };
+      }
+    }
+  }
+
+  return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
         {isDemoMode ? (
-          <DemoAuthProvider>{children}</DemoAuthProvider>
+          <DemoAuthProvider initialAuth={demoAuth}>{children}</DemoAuthProvider>
         ) : (
           children
         )}
       </body>
     </html>
   );
-
-  return content;
 }

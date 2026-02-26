@@ -27,15 +27,21 @@ const AuthContext = createContext<AuthContextValue>({
 
 export const useAuth = () => useContext(AuthContext);
 
-/** Provedor para DEMO_MODE — todos os usuários são considerados logados */
-export function DemoAuthProvider({ children }: { children: ReactNode }) {
+/** Provedor para DEMO_MODE — reflete sessão real do servidor */
+export function DemoAuthProvider({
+  children,
+  initialAuth,
+}: {
+  children: ReactNode;
+  initialAuth: { isSignedIn: boolean; userId: string | null; userFirstName: string | null };
+}) {
   return (
     <AuthContext.Provider
       value={{
         isLoaded: true,
-        isSignedIn: true,
-        userId: "demo-user-clerk-id-00001",
-        userFirstName: "Demo",
+        isSignedIn: initialAuth.isSignedIn,
+        userId: initialAuth.userId,
+        userFirstName: initialAuth.userFirstName,
       }}
     >
       {children}

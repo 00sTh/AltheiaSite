@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, User, Heart } from "lucide-react";
+import { ShoppingCart, User, Heart, LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
 import { LogoutButton } from "./logout-button";
@@ -19,11 +19,12 @@ const navLinks = [
 
 interface NavbarClientProps {
   userId: string | null;
+  isAdmin: boolean;
   cartCount: number;
   siteLogoUrl: string | null;
 }
 
-export function NavbarClient({ userId, cartCount, siteLogoUrl }: NavbarClientProps) {
+export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: NavbarClientProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -133,6 +134,22 @@ export function NavbarClient({ userId, cartCount, siteLogoUrl }: NavbarClientPro
             )}
           </Link>
 
+          {/* Painel Admin (só para admins, desktop) */}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              aria-label="Painel Admin"
+              className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold tracking-wider uppercase transition-all duration-200 hover:shadow-[0_0_14px_rgba(201,162,39,0.35)]"
+              style={{
+                border: "1px solid rgba(201,162,39,0.5)",
+                color: "#C9A227",
+              }}
+            >
+              <LayoutDashboard className="h-3.5 w-3.5" />
+              Admin
+            </Link>
+          )}
+
           {/* Conta (desktop) */}
           <Link
             href={userId ? "/account" : "/sign-in"}
@@ -149,7 +166,7 @@ export function NavbarClient({ userId, cartCount, siteLogoUrl }: NavbarClientPro
           {DEMO_MODE && userId && <LogoutButton />}
 
           {/* Hamburger mobile */}
-          <MobileNav userId={userId} cartCount={cartCount} />
+          <MobileNav userId={userId} isAdmin={isAdmin} cartCount={cartCount} />
         </div>
       </div>
     </header>

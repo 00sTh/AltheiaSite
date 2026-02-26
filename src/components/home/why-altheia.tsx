@@ -48,8 +48,8 @@ export function WhyAltheia({
     >
       <div className="container mx-auto max-w-7xl">
         <div className="grid grid-cols-1 md:grid-cols-3 divide-y md:divide-y-0 md:divide-x divide-[rgba(201,162,39,0.2)]">
-          {benefits.map(({ icon: Icon, title, description }) => (
-            <div key={title} className="flex items-start gap-4 px-8 py-6">
+          {benefits.map(({ icon: Icon, title, description }, idx) => (
+            <div key={idx} className="flex items-start gap-4 px-8 py-6">
               <Icon className="h-5 w-5 mt-0.5 flex-shrink-0" style={{ color: "#C9A227" }} />
               <div>
                 <p className="font-medium text-sm mb-1" style={{ color: "#F5F0E6" }}>

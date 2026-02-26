@@ -79,7 +79,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
                 borderBottom: "1px solid rgba(201,162,39,0.15)",
               }}
             >
-              {["Username", "E-mail", "Email", "Permissão", "Status", "Cadastro", "Ações"].map(
+              {["Username", "E-mail", "Verificado", "Permissão", "Status", "Cadastro", "Ações"].map(
                 (h) => (
                   <th
                     key={h}
@@ -96,7 +96,7 @@ export default async function AdminUsersPage({ searchParams }: UsersPageProps) {
             {users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-5 py-12 text-center"
                   style={{ color: "rgba(200,187,168,0.5)" }}
                 >

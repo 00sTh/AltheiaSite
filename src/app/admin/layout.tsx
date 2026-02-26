@@ -31,9 +31,9 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const { userId, sessionClaims } = await getServerAuth();
-  if (!userId) redirect("/sign-in");
+  if (!userId) redirect("/sign-in?redirect_url=/admin");
   const role = sessionClaims?.metadata?.role;
-  if (role !== "admin") redirect("/");
+  if (role !== "admin") redirect("/acesso-negado");
 
   return (
     <div

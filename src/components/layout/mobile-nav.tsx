@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ShoppingCart, User } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LayoutDashboard } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
 const navLinks = [
@@ -15,10 +15,11 @@ const navLinks = [
 
 interface MobileNavProps {
   userId: string | null;
+  isAdmin: boolean;
   cartCount: number;
 }
 
-export function MobileNav({ userId, cartCount }: MobileNavProps) {
+export function MobileNav({ userId, isAdmin, cartCount }: MobileNavProps) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -131,6 +132,23 @@ export function MobileNav({ userId, cartCount }: MobileNavProps) {
                     </span>
                   )}
                 </Link>
+
+                {/* Painel Admin (só para admins) */}
+                {isAdmin && (
+                  <Link
+                    href="/admin"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-semibold transition-all"
+                    style={{
+                      border: "1px solid rgba(201,162,39,0.4)",
+                      color: "#C9A227",
+                      backgroundColor: "rgba(201,162,39,0.06)",
+                    }}
+                  >
+                    <LayoutDashboard className="h-4 w-4" />
+                    <span>Painel Admin</span>
+                  </Link>
+                )}
 
                 {userId ? (
                   <Link

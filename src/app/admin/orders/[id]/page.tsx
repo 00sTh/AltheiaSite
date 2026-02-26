@@ -136,21 +136,16 @@ export default async function AdminOrderPage({ params }: Props) {
           </div>
 
           {/* Payment */}
-          {(order.stripePaymentId || order.stripeSessionId) && (
+          {order.cieloPaymentId && (
             <div
               className="rounded-2xl p-5"
               style={{ backgroundColor: "#0A2419", border: "1px solid rgba(201,162,39,0.15)" }}
             >
               <h2 className="font-semibold text-sm mb-4" style={{ color: "#F5F0E6" }}>
-                Pagamento
+                Pagamento Cielo
               </h2>
               <div className="space-y-1 text-xs" style={{ color: "rgba(200,187,168,0.6)" }}>
-                {order.stripePaymentId && (
-                  <p className="font-mono truncate">{order.stripePaymentId}</p>
-                )}
-                {order.stripeSessionId && (
-                  <p className="font-mono truncate">{order.stripeSessionId}</p>
-                )}
+                <p className="font-mono truncate">{order.cieloPaymentId}</p>
               </div>
             </div>
           )}

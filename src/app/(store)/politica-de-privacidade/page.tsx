@@ -56,7 +56,7 @@ export default function PoliticaDePrivacidadePage() {
               </li>
               <li>
                 <strong style={{ color: "#F5F0E6" }}>Dados de pagamento:</strong> processados
-                pelo Stripe — não armazenamos dados de cartão de crédito em nossos servidores.
+                pela Cielo — não armazenamos dados de cartão de crédito em nossos servidores.
               </li>
               <li>
                 <strong style={{ color: "#F5F0E6" }}>Dados de navegação:</strong> endereço IP,
@@ -114,7 +114,7 @@ export default function PoliticaDePrivacidadePage() {
             </p>
             <ul className="list-disc pl-5 space-y-1 mt-3">
               <li>
-                <strong style={{ color: "#F5F0E6" }}>Stripe Inc.:</strong> processamento de
+                <strong style={{ color: "#F5F0E6" }}>Cielo S.A.:</strong> processamento de
                 pagamentos;
               </li>
               <li>

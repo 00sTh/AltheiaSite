@@ -91,9 +91,9 @@ export default function TermosDeUsoPage() {
 
           <Section title="5. Pedidos e Pagamento">
             <p>
-              O pedido é confirmado após a aprovação do pagamento pelo processador (Stripe).
+              O pedido é confirmado após a aprovação do pagamento pelo processador (Cielo).
               Reservamo-nos o direito de cancelar pedidos suspeitos de fraude. O pagamento é
-              processado de forma segura via Stripe; não armazenamos dados de cartão.
+              processado de forma segura via Cielo; não armazenamos dados de cartão.
             </p>
           </Section>
 
