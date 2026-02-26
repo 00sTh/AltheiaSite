@@ -1,17 +1,100 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
+import { ArrowRight, Sparkles } from "lucide-react";
 
-export default function NotFoundPage() {
+export default function NotFound() {
   return (
-    <div className="flex min-h-[60vh] flex-col items-center justify-center gap-4 text-center px-4">
-      <p className="text-6xl font-bold text-primary">404</p>
-      <h1 className="text-2xl font-bold">Página não encontrada</h1>
-      <p className="text-muted-foreground max-w-sm">
-        A página que você está procurando não existe ou foi removida.
-      </p>
-      <Button asChild>
-        <Link href="/">Voltar para a loja</Link>
-      </Button>
+    <div
+      className="min-h-screen flex items-center justify-center px-4 relative overflow-hidden"
+      style={{
+        background:
+          "linear-gradient(135deg, #051F18 0%, #0A3D2F 40%, #0F4A37 70%, #0A3D2F 100%)",
+      }}
+    >
+      {/* Gold radial glow */}
+      <div
+        className="absolute inset-0"
+        style={{
+          background:
+            "radial-gradient(ellipse 60% 50% at 50% 50%, rgba(201,162,39,0.06) 0%, transparent 70%)",
+        }}
+      />
+
+      <div className="relative z-10 text-center max-w-lg">
+        {/* Decorative line */}
+        <div
+          className="w-px h-16 mx-auto mb-8"
+          style={{
+            background: "linear-gradient(to bottom, transparent, rgba(201,162,39,0.4))",
+          }}
+        />
+
+        {/* Gold 404 */}
+        <p
+          className="font-serif text-[8rem] font-bold leading-none mb-2"
+          style={{
+            background: "linear-gradient(135deg, #C9A227 0%, #E8C84A 50%, #9E7B1E 100%)",
+            WebkitBackgroundClip: "text",
+            WebkitTextFillColor: "transparent",
+          }}
+        >
+          404
+        </p>
+
+        {/* Separator */}
+        <div className="flex items-center gap-4 justify-center mb-6">
+          <div
+            className="h-px flex-1 max-w-16"
+            style={{ background: "rgba(201,162,39,0.3)" }}
+          />
+          <Sparkles className="h-4 w-4" style={{ color: "rgba(201,162,39,0.5)" }} />
+          <div
+            className="h-px flex-1 max-w-16"
+            style={{ background: "rgba(201,162,39,0.3)" }}
+          />
+        </div>
+
+        <h1
+          className="font-serif text-3xl font-bold mb-4"
+          style={{ color: "#F5F0E6" }}
+        >
+          Página não encontrada
+        </h1>
+        <p
+          className="text-base leading-relaxed mb-10"
+          style={{ color: "#C8BBA8" }}
+        >
+          A página que você procura não existe ou foi movida. Que tal explorar
+          nossa coleção de luxo?
+        </p>
+
+        <div className="flex flex-col sm:flex-row gap-3 justify-center">
+          <Link
+            href="/"
+            className="px-6 py-3 rounded-full text-sm font-semibold tracking-wider uppercase transition-all duration-200 hover:shadow-[0_0_20px_rgba(201,162,39,0.3)]"
+            style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+          >
+            Início
+          </Link>
+          <Link
+            href="/products"
+            className="flex items-center gap-2 justify-center px-6 py-3 rounded-full text-sm font-semibold tracking-wider uppercase transition-all duration-200"
+            style={{
+              border: "1px solid rgba(201,162,39,0.4)",
+              color: "#C9A227",
+            }}
+          >
+            Ver Coleção <ArrowRight className="h-4 w-4" />
+          </Link>
+        </div>
+
+        {/* Bottom decoration */}
+        <div
+          className="w-px h-16 mx-auto mt-8"
+          style={{
+            background: "linear-gradient(to top, transparent, rgba(201,162,39,0.4))",
+          }}
+        />
+      </div>
     </div>
   );
 }

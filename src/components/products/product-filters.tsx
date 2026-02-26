@@ -2,7 +2,6 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useCallback } from "react";
-import { Button } from "@/components/ui/button";
 import type { Category } from "@prisma/client";
 
 interface ProductFiltersProps {
@@ -15,7 +14,6 @@ export function ProductFilters({ categories }: ProductFiltersProps) {
 
   const currentCategory = searchParams.get("category");
 
-  /** Atualiza o filtro na URL sem perder outros parâmetros */
   const setFilter = useCallback(
     (key: string, value: string | null) => {
       const params = new URLSearchParams(searchParams.toString());
@@ -24,7 +22,6 @@ export function ProductFilters({ categories }: ProductFiltersProps) {
       } else {
         params.delete(key);
       }
-      // Volta para página 1 ao filtrar
       params.delete("page");
       router.push(`/products?${params.toString()}`);
     },
@@ -32,39 +29,71 @@ export function ProductFilters({ categories }: ProductFiltersProps) {
   );
 
   return (
-    <aside className="space-y-4">
-      <div>
-        <h3 className="font-semibold mb-3 text-sm uppercase tracking-wide text-muted-foreground">
-          Categorias
-        </h3>
-        <ul className="space-y-1">
-          <li>
-            <Button
-              variant={!currentCategory ? "secondary" : "ghost"}
-              size="sm"
-              className="w-full justify-start"
-              onClick={() => setFilter("category", null)}
-            >
-              Todos os produtos
-            </Button>
-          </li>
-          {categories.map((cat) => (
+    <aside
+      className="rounded-2xl p-5 h-fit sticky top-24"
+      style={{
+        backgroundColor: "#0F4A37",
+        border: "1px solid rgba(201,162,39,0.15)",
+      }}
+    >
+      <h3
+        className="label-luxury mb-4 pb-3"
+        style={{
+          color: "#C9A227",
+          borderBottom: "1px solid rgba(201,162,39,0.15)",
+        }}
+      >
+        Categorias
+      </h3>
+      <ul className="space-y-1">
+        <li>
+          <button
+            className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+            style={{
+              backgroundColor: !currentCategory
+                ? "rgba(201,162,39,0.12)"
+                : "transparent",
+              color: !currentCategory ? "#C9A227" : "#C8BBA8",
+              border: !currentCategory
+                ? "1px solid rgba(201,162,39,0.3)"
+                : "1px solid transparent",
+            }}
+            onClick={() => setFilter("category", null)}
+          >
+            <span>Todos</span>
+          </button>
+        </li>
+        {categories.map((cat) => {
+          const isActive = currentCategory === cat.slug;
+          return (
             <li key={cat.id}>
-              <Button
-                variant={currentCategory === cat.slug ? "secondary" : "ghost"}
-                size="sm"
-                className="w-full justify-start"
+              <button
+                className="w-full flex items-center justify-between px-3 py-2.5 rounded-xl text-sm font-medium transition-all duration-200"
+                style={{
+                  backgroundColor: isActive
+                    ? "rgba(201,162,39,0.12)"
+                    : "transparent",
+                  color: isActive ? "#C9A227" : "#C8BBA8",
+                  border: isActive
+                    ? "1px solid rgba(201,162,39,0.3)"
+                    : "1px solid transparent",
+                }}
                 onClick={() => setFilter("category", cat.slug)}
               >
-                {cat.name}
-                <span className="ml-auto text-xs text-muted-foreground">
+                <span>{cat.name}</span>
+                <span
+                  className="text-xs ml-auto"
+                  style={{
+                    color: isActive ? "#C9A227" : "rgba(200,187,168,0.5)",
+                  }}
+                >
                   {cat._count.products}
                 </span>
-              </Button>
+              </button>
             </li>
-          ))}
-        </ul>
-      </div>
+          );
+        })}
+      </ul>
     </aside>
   );
 }

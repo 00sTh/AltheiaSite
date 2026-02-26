@@ -1,0 +1,5 @@
+{
+  "buildCommand": "npm run build:prod",
+  "framework": "nextjs",
+  "regions": ["gru1"]
+}

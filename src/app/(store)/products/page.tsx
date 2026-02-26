@@ -2,16 +2,14 @@ import { Suspense } from "react";
 import type { Metadata } from "next";
 import { ProductCard } from "@/components/products/product-card";
 import { ProductFilters } from "@/components/products/product-filters";
-import { Button } from "@/components/ui/button";
 import { getProducts, getCategories } from "@/actions/products";
 import Link from "next/link";
 
 export const metadata: Metadata = {
   title: "Produtos",
-  description: "Explore nossa linha completa de cosméticos premium.",
+  description: "Explore nossa linha completa de cosméticos de luxo Altheia.",
 };
 
-// Revalida a listagem a cada 30 minutos
 export const revalidate = 1800;
 
 interface ProductsPageProps {
@@ -37,73 +35,135 @@ export default async function ProductsPage({ searchParams }: ProductsPageProps) 
     getCategories(),
   ]);
 
+  const pageTitle = params.category
+    ? categories.find((c) => c.slug === params.category)?.name ?? "Produtos"
+    : params.featured === "true"
+    ? "Destaques"
+    : "Todos os Produtos";
+
   return (
-    <div className="container mx-auto px-4 py-10">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold tracking-tight">
-          {params.category
-            ? categories.find((c) => c.slug === params.category)?.name ?? "Produtos"
-            : params.featured === "true"
-            ? "Destaques"
-            : "Todos os produtos"}
-        </h1>
-        <p className="text-muted-foreground mt-1">
-          {total} produto{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}
-        </p>
+    <div style={{ backgroundColor: "#0A3D2F", minHeight: "100vh" }}>
+      {/* Page hero */}
+      <div
+        className="relative py-16 px-4 text-center overflow-hidden"
+        style={{
+          backgroundColor: "#0F4A37",
+          borderBottom: "1px solid rgba(201,162,39,0.2)",
+        }}
+      >
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse 60% 80% at 50% 50%, rgba(201,162,39,0.06) 0%, transparent 70%)",
+          }}
+        />
+        <div className="relative z-10">
+          <p
+            className="label-luxury mb-3"
+            style={{ color: "#C9A227" }}
+          >
+            Coleção Altheia
+          </p>
+          <h1
+            className="font-serif text-4xl md:text-5xl font-bold"
+            style={{ color: "#F5F0E6" }}
+          >
+            {pageTitle}
+          </h1>
+          <p className="mt-3 text-sm" style={{ color: "#C8BBA8" }}>
+            {total} produto{total !== 1 ? "s" : ""} encontrado{total !== 1 ? "s" : ""}
+          </p>
+        </div>
       </div>
 
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-[220px_1fr]">
-        {/* Filtros */}
-        <Suspense fallback={<div className="animate-pulse bg-muted h-64 rounded-xl" />}>
-          <ProductFilters categories={categories} />
-        </Suspense>
+      {/* Content */}
+      <div className="container mx-auto px-4 py-10 max-w-7xl">
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[240px_1fr]">
+          {/* Filters */}
+          <Suspense
+            fallback={
+              <div
+                className="animate-pulse rounded-2xl h-64"
+                style={{
+                  backgroundColor: "#0F4A37",
+                  border: "1px solid rgba(201,162,39,0.15)",
+                }}
+              />
+            }
+          >
+            <ProductFilters categories={categories} />
+          </Suspense>
 
-        {/* Grid de produtos */}
-        <div>
-          {products.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-20 text-center">
-              <p className="text-muted-foreground">
-                Nenhum produto encontrado para estes filtros.
-              </p>
-              <Button variant="link" asChild className="mt-2">
-                <Link href="/products">Limpar filtros</Link>
-              </Button>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
-                {products.map((product) => (
-                  <ProductCard key={product.id} product={product} />
-                ))}
+          {/* Product grid */}
+          <div>
+            {products.length === 0 ? (
+              <div
+                className="flex flex-col items-center justify-center py-20 text-center rounded-2xl"
+                style={{
+                  backgroundColor: "#0F4A37",
+                  border: "1px solid rgba(201,162,39,0.15)",
+                }}
+              >
+                <p className="text-lg font-serif mb-3" style={{ color: "#F5F0E6" }}>
+                  Nenhum produto encontrado
+                </p>
+                <p className="text-sm mb-6" style={{ color: "#C8BBA8" }}>
+                  Tente ajustar os filtros de busca.
+                </p>
+                <Link
+                  href="/products"
+                  className="px-6 py-2.5 rounded-full text-xs font-semibold tracking-widest uppercase transition-all hover:bg-[#E8C84A] hover:shadow-[0_0_15px_rgba(201,162,39,0.4)]"
+                  style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+                >
+                  Limpar filtros
+                </Link>
               </div>
-
-              {/* Paginação simples */}
-              {pages > 1 && (
-                <div className="mt-10 flex justify-center gap-2">
-                  {Array.from({ length: pages }).map((_, i) => {
-                    const p = i + 1;
-                    const href = new URL(
-                      `/products?${new URLSearchParams({
-                        ...params,
-                        page: String(p),
-                      })}`,
-                      "http://x"
-                    ).search.slice(1);
-                    return (
-                      <Button
-                        key={p}
-                        variant={p === page ? "default" : "outline"}
-                        size="sm"
-                        asChild
-                      >
-                        <Link href={`/products?${href}`}>{p}</Link>
-                      </Button>
-                    );
-                  })}
+            ) : (
+              <>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
+                  {products.map((product) => (
+                    <ProductCard key={product.id} product={product} />
+                  ))}
                 </div>
-              )}
-            </>
-          )}
+
+                {/* Pagination */}
+                {pages > 1 && (
+                  <div className="mt-12 flex justify-center gap-2">
+                    {Array.from({ length: pages }).map((_, i) => {
+                      const p = i + 1;
+                      const href = new URL(
+                        `/products?${new URLSearchParams({
+                          ...params,
+                          page: String(p),
+                        })}`,
+                        "http://x"
+                      ).search.slice(1);
+                      const isActive = p === page;
+                      return (
+                        <Link
+                          key={p}
+                          href={`/products?${href}`}
+                          className="w-10 h-10 flex items-center justify-center rounded-full text-sm font-medium transition-all duration-200"
+                          style={{
+                            backgroundColor: isActive
+                              ? "#C9A227"
+                              : "rgba(201,162,39,0.08)",
+                            color: isActive ? "#0A3D2F" : "#C8BBA8",
+                            border: isActive
+                              ? "1px solid #C9A227"
+                              : "1px solid rgba(201,162,39,0.2)",
+                          }}
+                        >
+                          {p}
+                        </Link>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+          </div>
         </div>
       </div>
     </div>

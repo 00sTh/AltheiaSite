@@ -1,0 +1,154 @@
+import type { Metadata } from "next";
+import Link from "next/link";
+import Image from "next/image";
+import { prisma } from "@/lib/prisma";
+import { formatPrice, parseImages } from "@/lib/utils";
+import { Plus, Pencil, EyeOff, Eye } from "lucide-react";
+import { ProductRowActions } from "@/components/admin/product-row-actions";
+
+export const metadata: Metadata = { title: "Admin — Produtos" };
+
+export default async function AdminProductsPage() {
+  const products = await prisma.product.findMany({
+    include: { category: true },
+    orderBy: { createdAt: "desc" },
+  });
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-8">
+        <div>
+          <h1 className="font-serif text-3xl font-bold" style={{ color: "#F5F0E6" }}>
+            Produtos
+          </h1>
+          <p className="text-sm mt-1" style={{ color: "rgba(200,187,168,0.6)" }}>
+            {products.length} produto{products.length !== 1 ? "s" : ""} cadastrados
+          </p>
+        </div>
+        <Link
+          href="/admin/products/new"
+          className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all duration-200 hover:shadow-[0_0_20px_rgba(201,162,39,0.3)]"
+          style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+        >
+          <Plus className="h-4 w-4" />
+          Novo produto
+        </Link>
+      </div>
+
+      <div
+        className="rounded-2xl overflow-hidden"
+        style={{ border: "1px solid rgba(201,162,39,0.15)" }}
+      >
+        <table className="w-full text-sm">
+          <thead>
+            <tr style={{ backgroundColor: "#0F2E1E", borderBottom: "1px solid rgba(201,162,39,0.1)" }}>
+              {["Produto", "Categoria", "Preço", "Estoque", "Status", "Ações"].map((h) => (
+                <th
+                  key={h}
+                  className="px-5 py-3 text-left text-xs font-semibold tracking-wider uppercase"
+                  style={{ color: "rgba(200,187,168,0.4)" }}
+                >
+                  {h}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody style={{ backgroundColor: "#0A2419" }}>
+            {products.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={6}
+                  className="px-5 py-12 text-center text-sm"
+                  style={{ color: "rgba(200,187,168,0.4)" }}
+                >
+                  Nenhum produto cadastrado.{" "}
+                  <Link href="/admin/products/new" style={{ color: "#C9A227" }}>
+                    Criar primeiro produto
+                  </Link>
+                </td>
+              </tr>
+            ) : (
+              products.map((product) => {
+                const images = parseImages(product.images as unknown as string);
+                const thumb = images[0];
+                return (
+                  <tr
+                    key={product.id}
+                    style={{ borderBottom: "1px solid rgba(201,162,39,0.06)" }}
+                  >
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <div
+                          className="h-10 w-10 rounded-lg overflow-hidden shrink-0"
+                          style={{ backgroundColor: "#145A43" }}
+                        >
+                          {thumb && (
+                            <Image
+                              src={thumb}
+                              alt={product.name}
+                              width={40}
+                              height={40}
+                              className="h-full w-full object-cover"
+                              unoptimized
+                            />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium text-sm" style={{ color: "#F5F0E6" }}>
+                            {product.name}
+                          </p>
+                          <p className="text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
+                            {product.slug}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-5 py-4 text-sm" style={{ color: "#C8BBA8" }}>
+                      {product.category.name}
+                    </td>
+                    <td className="px-5 py-4 font-semibold" style={{ color: "#C9A227" }}>
+                      {formatPrice(Number(product.price))}
+                    </td>
+                    <td className="px-5 py-4 text-sm" style={{ color: product.stock === 0 ? "#F87171" : "#C8BBA8" }}>
+                      {product.stock}
+                    </td>
+                    <td className="px-5 py-4">
+                      <span
+                        className="flex items-center gap-1.5 text-xs font-medium"
+                        style={{ color: product.active ? "#4ADE80" : "#F87171" }}
+                      >
+                        {product.active ? (
+                          <Eye className="h-3 w-3" />
+                        ) : (
+                          <EyeOff className="h-3 w-3" />
+                        )}
+                        {product.active ? "Ativo" : "Inativo"}
+                      </span>
+                    </td>
+                    <td className="px-5 py-4">
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/admin/products/${product.id}/edit`}
+                          className="flex items-center gap-1.5 text-xs font-medium transition-colors hover:text-[#C9A227]"
+                          style={{ color: "rgba(200,187,168,0.6)" }}
+                        >
+                          <Pencil className="h-3 w-3" />
+                          Editar
+                        </Link>
+                        <ProductRowActions
+                          productId={product.id}
+                          featured={product.featured}
+                          productName={product.name}
+                        />
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

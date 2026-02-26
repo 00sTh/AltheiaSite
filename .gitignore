@@ -37,3 +37,13 @@ next-env.d.ts
 # prisma
 prisma/dev.db
 prisma/dev.db-journal
+prisma/demo.db
+prisma/demo.db-journal
+prisma/demo.db-wal
+prisma/demo.db-shm
+# stray nested prisma dir
+prisma/prisma/
+
+# stray asset at root (usar public/ em vez disso)
+lumina-serum.png
+.env.production
