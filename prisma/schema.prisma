@@ -1,0 +1,160 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+// ============================================================
+// USER PROFILE — extensão do usuário Clerk
+// O Clerk gerencia a senha/sessão; aqui ficam dados do negócio
+// ============================================================
+model UserProfile {
+  id        String   @id @default(uuid())
+  clerkId   String   @unique
+  email     String
+  firstName String?
+  lastName  String?
+  avatarUrl String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+  cart   Cart?
+
+  @@index([clerkId])
+  @@map("user_profiles")
+}
+
+// ============================================================
+// CATEGORIA — suporta hierarquia (subcategorias via parentId)
+// ============================================================
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  slug     String  @unique
+  imageUrl String?
+
+  // Auto-relação para subcategorias
+  parentId String?
+  parent   Category?  @relation("CategoryChildren", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryChildren")
+
+  products Product[]
+
+  @@index([slug])
+  @@map("categories")
+}
+
+// ============================================================
+// PRODUTO
+// ============================================================
+model Product {
+  id          String  @id @default(uuid())
+  name        String
+  slug        String  @unique
+  description String
+  /// Preço com 2 casas decimais — ex: 49.90
+  price       Decimal @db.Decimal(10, 2)
+  stock       Int     @default(0)
+  /// Array de URLs das imagens
+  images      String[]
+  featured    Boolean @default(false)
+  /// Controla visibilidade sem deletar do banco
+  active      Boolean @default(true)
+
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([slug])
+  @@index([categoryId])
+  @@index([featured])
+  @@index([active])
+  @@map("products")
+}
+
+// ============================================================
+// CARRINHO — um por usuário (clerkId), persistido no banco
+// ============================================================
+model Cart {
+  id        String   @id @default(uuid())
+  /// Chave do Clerk — permite carrinho antes do perfil ser criado
+  clerkId   String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userProfileId String?     @unique
+  userProfile   UserProfile? @relation(fields: [userProfileId], references: [id])
+  items         CartItem[]
+
+  @@index([clerkId])
+  @@map("carts")
+}
+
+model CartItem {
+  id        String @id @default(uuid())
+  cartId    String
+  productId String
+  quantity  Int    @default(1)
+
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id])
+
+  /// Garante que cada produto apareça apenas uma vez por carrinho
+  @@unique([cartId, productId])
+  @@map("cart_items")
+}
+
+// ============================================================
+// PEDIDO
+// ============================================================
+enum OrderStatus {
+  PENDING
+  PAID
+  SHIPPED
+  DELIVERED
+  CANCELLED
+}
+
+model Order {
+  id              String      @id @default(uuid())
+  status          OrderStatus @default(PENDING)
+  /// Total calculado no servidor no momento da criação
+  total           Decimal     @db.Decimal(10, 2)
+  stripePaymentId String?
+  stripeSessionId String?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  userProfileId String
+  userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  items         OrderItem[]
+
+  @@index([userProfileId])
+  @@index([status])
+  @@index([stripePaymentId])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        String  @id @default(uuid())
+  quantity  Int
+  /// Preço snapshot — preserva o preço cobrado mesmo se o produto mudar
+  price     Decimal @db.Decimal(10, 2)
+
+  orderId   String
+  productId String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product   Product @relation(fields: [productId], references: [id])
+
+  @@map("order_items")
+}
