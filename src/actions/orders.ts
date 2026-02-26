@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
+import { PaymentMethod } from "@prisma/client";
 import { getServerAuth, getServerUser } from "@/lib/auth";
 import {
   createCreditCardPayment,
@@ -129,7 +130,7 @@ export async function createOrder(
       data: {
         status: "PENDING",
         price: total,
-        paymentMethod,
+        paymentMethod: paymentMethod as PaymentMethod,
         customerName: d.name,
         customerEmail: d.email,
         customerPhone: d.phone || null,

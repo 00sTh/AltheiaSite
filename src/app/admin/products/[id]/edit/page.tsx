@@ -29,7 +29,7 @@ export default async function EditProductPage({ params }: Props) {
     description: product.description,
     price: Number(product.price),
     stock: product.stock,
-    images: parseImages(product.images as string),
+    images: parseImages(product.images as string | string[]),
     featured: product.featured,
     active: product.active,
     ingredients: product.ingredients,

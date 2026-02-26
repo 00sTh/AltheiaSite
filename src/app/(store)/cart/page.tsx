@@ -13,7 +13,7 @@ export const metadata: Metadata = {
 export default async function CartPage() {
   const [cart, settings] = await Promise.all([getCart(), getSiteSettings()]);
   const items = cart?.items ?? [];
-  const threshold = settings.shippingFreeThreshold;
+  const threshold = Number(settings.shippingFreeThreshold);
 
   const subtotal = items.reduce(
     (acc, item) => acc + Number(item.product.price) * item.quantity,

@@ -69,7 +69,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
     .filter((p) => p.id !== product.id)
     .slice(0, 4);
 
-  const shippingThreshold = formatPrice(settings.shippingFreeThreshold);
+  const shippingThreshold = formatPrice(Number(settings.shippingFreeThreshold));
 
   return (
     <div

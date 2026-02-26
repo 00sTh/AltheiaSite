@@ -6,7 +6,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerAuth } from "@/lib/auth";
 import { uploadImage, deleteImage } from "@/lib/blob";
 import { z } from "zod";
-import { Prisma } from "@prisma/client";
+import { Prisma, OrderStatus } from "@prisma/client";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
 
@@ -337,7 +337,7 @@ export async function updateOrderStatus(orderId: string, status: string) {
 
   await prisma.order.update({
     where: { id: orderId },
-    data: { status },
+    data: { status: status as OrderStatus },
   });
 
   revalidatePath("/admin/orders");

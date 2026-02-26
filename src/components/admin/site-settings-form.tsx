@@ -423,7 +423,7 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
               type="number"
               min="0"
               step="1"
-              defaultValue={settings.shippingFreeThreshold}
+              defaultValue={Number(settings.shippingFreeThreshold)}
               style={inputStyle}
             />
           </div>
