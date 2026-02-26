@@ -97,14 +97,47 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
             />
           </div>
           <div>
-            <label style={labelStyle}>URL do vídeo do hero (opcional)</label>
+            <label style={labelStyle}>URL do vídeo do hero (fallback)</label>
             <input
               name="heroVideoUrl"
               type="url"
               defaultValue={settings.heroVideoUrl ?? ""}
               style={inputStyle}
-              placeholder="https://..."
+              placeholder="https://youtube.com/watch?v=..."
             />
+          </div>
+          <div>
+            <label style={labelStyle}>Vídeo esquerdo — Split Hero (YouTube ou MP4)</label>
+            <input
+              name="leftVideoUrl"
+              type="url"
+              defaultValue={settings.leftVideoUrl ?? ""}
+              style={inputStyle}
+              placeholder="https://youtube.com/watch?v=..."
+            />
+          </div>
+          <div>
+            <label style={labelStyle}>Vídeo direito — Split Hero (YouTube ou MP4)</label>
+            <input
+              name="rightVideoUrl"
+              type="url"
+              defaultValue={settings.rightVideoUrl ?? ""}
+              style={inputStyle}
+              placeholder="https://youtube.com/watch?v=..."
+            />
+          </div>
+          <div className="md:col-span-2">
+            <label style={labelStyle}>URL do logo PNG transparente (centro do hero)</label>
+            <input
+              name="heroLogoUrl"
+              type="url"
+              defaultValue={settings.heroLogoUrl ?? ""}
+              style={inputStyle}
+              placeholder="https://... (PNG com fundo transparente)"
+            />
+            <p className="mt-1.5 text-xs" style={{ color: "rgba(200,187,168,0.4)" }}>
+              Se vazio, exibe o texto "Althéia" em Playfair Display. Recomendado: PNG 680×240px.
+            </p>
           </div>
         </div>
       </div>

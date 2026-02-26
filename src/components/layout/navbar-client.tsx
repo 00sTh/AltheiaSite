@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart, User, Heart, Menu } from "lucide-react";
+import { ShoppingCart, User, Heart } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
 import { APP_NAME } from "@/lib/constants";
@@ -22,7 +22,7 @@ export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
-    const handleScroll = () => setScrolled(window.scrollY > 20);
+    const handleScroll = () => setScrolled(window.scrollY > 30);
     window.addEventListener("scroll", handleScroll, { passive: true });
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
@@ -31,22 +31,26 @@ export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
     <header
       className="sticky top-0 z-50 w-full transition-all duration-500"
       style={{
-        backgroundColor: scrolled ? "rgba(10,61,47,0.95)" : "transparent",
-        backdropFilter: scrolled ? "blur(12px)" : "none",
+        backgroundColor: scrolled
+          ? "rgba(10,61,47,0.97)"
+          : "rgba(10,61,47,0.18)",
+        backdropFilter: "blur(14px)",
         borderBottom: scrolled
-          ? "1px solid rgba(201,162,39,0.2)"
-          : "1px solid transparent",
+          ? "1px solid rgba(201,162,39,0.25)"
+          : "1px solid rgba(201,162,39,0.08)",
+        boxShadow: "0 4px 30px rgba(201,162,39,0.12)",
       }}
     >
-      <div className="relative container mx-auto flex h-16 items-center px-4 max-w-7xl">
-        {/* Left — nav links (desktop) */}
-        <nav className="hidden md:flex items-center gap-8">
+      <div className="relative container mx-auto flex h-20 items-center px-6 max-w-7xl">
+
+        {/* Esquerda — links de navegação (desktop) */}
+        <nav className="hidden md:flex items-center gap-10">
           {navLinks.map(({ href, label }) => (
             <Link
               key={href}
               href={href}
-              className="text-sm font-medium transition-colors duration-200 relative group pb-0.5"
-              style={{ color: "#C8BBA8" }}
+              className="relative text-base font-semibold tracking-wider uppercase transition-colors duration-200 group pb-0.5"
+              style={{ color: "#C8BBA8", fontSize: "0.72rem", letterSpacing: "0.14em" }}
             >
               <span className="group-hover:text-[#C9A227] transition-colors duration-200">
                 {label}
@@ -59,35 +63,45 @@ export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
           ))}
         </nav>
 
-        {/* Center — logo (absolute) */}
+        {/* Centro — logo absoluto */}
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 font-serif font-bold text-xl tracking-widest uppercase transition-colors duration-200 hover:text-[#C9A227]"
-          style={{ color: "#F5F0E6" }}
+          className="absolute left-1/2 -translate-x-1/2 font-serif font-bold tracking-[0.22em] uppercase transition-colors duration-300 hover:text-[#C9A227] select-none"
+          style={{
+            color: "#F5F0E6",
+            fontSize: "clamp(1.1rem, 2vw, 1.5rem)",
+            textShadow: "0 0 30px rgba(201,162,39,0.15)",
+          }}
         >
           {APP_NAME}
         </Link>
 
-        {/* Right — icons */}
+        {/* Direita — ícones de ação */}
         <div className="ml-auto flex items-center gap-1">
+          {/* Wishlist (só logado) */}
           {userId && (
             <Link
               href="/wishlist"
               aria-label="Lista de Desejos"
-              className="flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-200 hover:text-[#C9A227]"
+              className="group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200"
               style={{ color: "#C8BBA8" }}
             >
-              <Heart className="h-5 w-5" />
+              <Heart
+                className="h-5 w-5 transition-all duration-200 group-hover:text-[#C9A227] group-hover:drop-shadow-[0_0_8px_rgba(201,162,39,0.6)]"
+              />
             </Link>
           )}
 
+          {/* Carrinho */}
           <Link
             href="/cart"
             aria-label="Carrinho"
-            className="relative flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-200 hover:text-[#C9A227]"
+            className="group relative flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200"
             style={{ color: "#C8BBA8" }}
           >
-            <ShoppingCart className="h-5 w-5" />
+            <ShoppingCart
+              className="h-5 w-5 transition-all duration-200 group-hover:text-[#C9A227] group-hover:drop-shadow-[0_0_8px_rgba(201,162,39,0.6)]"
+            />
             {cartCount > 0 && (
               <span
                 className="absolute -right-0.5 -top-0.5 flex h-4 w-4 items-center justify-center rounded-full text-[9px] font-bold"
@@ -98,16 +112,19 @@ export function NavbarClient({ userId, cartCount }: NavbarClientProps) {
             )}
           </Link>
 
+          {/* Conta (desktop) */}
           <Link
             href={userId ? "/account" : "/sign-in"}
             aria-label="Conta"
-            className="hidden md:flex items-center justify-center w-10 h-10 rounded-full transition-colors duration-200 hover:text-[#C9A227]"
+            className="group hidden md:flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200"
             style={{ color: "#C8BBA8" }}
           >
-            <User className="h-5 w-5" />
+            <User
+              className="h-5 w-5 transition-all duration-200 group-hover:text-[#C9A227] group-hover:drop-shadow-[0_0_8px_rgba(201,162,39,0.6)]"
+            />
           </Link>
 
-          {/* Mobile hamburger */}
+          {/* Hamburger mobile */}
           <MobileNav userId={userId} cartCount={cartCount} />
         </div>
       </div>

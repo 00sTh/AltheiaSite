@@ -29,6 +29,9 @@ export default async function HomePage() {
         subtitle={settings.heroSubtitle}
         heroImageUrl={settings.heroImageUrl}
         heroVideoUrl={settings.heroVideoUrl}
+        leftVideoUrl={settings.leftVideoUrl}
+        rightVideoUrl={settings.rightVideoUrl}
+        heroLogoUrl={settings.heroLogoUrl}
       />
 
       <Suspense fallback={<div className="h-48 animate-pulse" style={{ backgroundColor: "#0A3D2F" }} />}>

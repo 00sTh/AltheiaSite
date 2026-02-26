@@ -151,6 +151,9 @@ model SiteSettings {
   heroSubtitle         String   @default("Cosméticos de luxo formulados com a pureza da ciência e da natureza")
   heroImageUrl         String?
   heroVideoUrl         String?
+  leftVideoUrl         String?
+  rightVideoUrl        String?
+  heroLogoUrl          String?
   aboutTitle           String   @default("Nossa História")
   aboutText            String   @default("Nascemos da paixão por uma beleza autêntica, sustentável e eficaz. A Altheia foi criada para mulheres que buscam o melhor da natureza aliado à inovação científica.")
   aboutImageUrl        String?

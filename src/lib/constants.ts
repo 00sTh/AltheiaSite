@@ -1,4 +1,4 @@
-export const APP_NAME = "Altheia";
+export const APP_NAME = "Althéia";
 export const APP_TAGLINE = "A Verdade da Beleza";
 export const APP_DESCRIPTION =
   "Cosméticos de luxo formulados com ingredientes raros para revelar a luminosidade natural da sua pele.";
