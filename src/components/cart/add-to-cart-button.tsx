@@ -2,8 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { ShoppingCart, Check, Loader2 } from "lucide-react";
+import { useUser } from "@clerk/nextjs";
 import { Button } from "@/components/ui/button";
 import { addToCart } from "@/actions/cart";
+import { addToGuestCart } from "@/hooks/use-guest-cart";
 
 interface AddToCartButtonProps {
   productId: string;
@@ -11,20 +13,33 @@ interface AddToCartButtonProps {
   className?: string;
 }
 
+/**
+ * Botão "Adicionar ao carrinho" — suporta usuários autenticados e guests.
+ *
+ * - Autenticado: persiste no banco via Server Action
+ * - Guest: salva no localStorage (sincronizado ao banco no próximo login)
+ */
 export function AddToCartButton({
   productId,
   disabled = false,
   className,
 }: AddToCartButtonProps) {
+  const { isSignedIn, isLoaded } = useUser();
   const [isPending, startTransition] = useTransition();
   const [added, setAdded] = useState(false);
 
   function handleAddToCart() {
     startTransition(async () => {
       try {
-        await addToCart({ productId, quantity: 1 });
+        if (isSignedIn) {
+          // Usuário autenticado — persiste no banco
+          await addToCart({ productId, quantity: 1 });
+        } else {
+          // Guest — salva no localStorage para sincronizar ao logar
+          addToGuestCart(productId, 1);
+        }
+
         setAdded(true);
-        // Reseta o estado "adicionado" após 2s
         setTimeout(() => setAdded(false), 2000);
       } catch (err) {
         console.error("Erro ao adicionar ao carrinho:", err);
@@ -32,7 +47,8 @@ export function AddToCartButton({
     });
   }
 
-  const isDisabled = disabled || isPending;
+  // Aguarda Clerk carregar antes de permitir a ação
+  const isDisabled = disabled || isPending || !isLoaded;
 
   return (
     <Button
@@ -47,7 +63,11 @@ export function AddToCartButton({
       ) : (
         <ShoppingCart className="h-4 w-4" />
       )}
-      {isPending ? "Adicionando..." : added ? "Adicionado!" : "Adicionar ao carrinho"}
+      {isPending
+        ? "Adicionando..."
+        : added
+        ? "Adicionado!"
+        : "Adicionar ao carrinho"}
     </Button>
   );
 }
