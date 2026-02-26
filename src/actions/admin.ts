@@ -232,15 +232,33 @@ export async function deleteProduct(id: string) {
   return { success: true };
 }
 
-/** Hard delete — remove permanentemente */
+/** Hard delete — remove permanentemente.
+ *  Se o produto tem pedidos históricos (OrderItem), faz soft delete em vez disso.
+ */
 export async function hardDeleteProduct(id: string) {
   await requireAdmin();
 
-  await prisma.product.delete({ where: { id } });
+  // Verificar se há pedidos históricos referenciando este produto
+  const orderItemCount = await prisma.orderItem.count({ where: { productId: id } });
+
+  if (orderItemCount > 0) {
+    // Não é possível excluir — há pedidos históricos. Faz soft delete.
+    await prisma.product.update({ where: { id }, data: { active: false } });
+    revalidatePath("/products");
+    revalidatePath("/admin/products");
+    return { success: true, softDeleted: true };
+  }
+
+  // Remove registros filhos sem cascade
+  await prisma.$transaction([
+    prisma.cartItem.deleteMany({ where: { productId: id } }),
+    prisma.wishlistItem.deleteMany({ where: { productId: id } }),
+    prisma.product.delete({ where: { id } }),
+  ]);
 
   revalidatePath("/products");
   revalidatePath("/admin/products");
-  return { success: true };
+  return { success: true, softDeleted: false };
 }
 
 /** Alterna o flag featured do produto */

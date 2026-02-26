@@ -24,7 +24,10 @@ export function ProductRowActions({ productId, featured, productName }: ProductR
   function handleDelete() {
     if (!confirm(`Excluir permanentemente "${productName}"? Esta ação não pode ser desfeita.`)) return;
     startTransition(async () => {
-      await hardDeleteProduct(productId);
+      const result = await hardDeleteProduct(productId);
+      if (result.success && result.softDeleted) {
+        alert(`"${productName}" tem pedidos históricos e foi desativado (oculto) em vez de excluído.`);
+      }
     });
   }
 

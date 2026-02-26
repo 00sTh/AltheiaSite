@@ -3,6 +3,7 @@
 import { useTransition, useState } from "react";
 import { updateSiteSettings } from "@/actions/admin";
 import type { SiteSettings } from "@prisma/client";
+import { MediaPickerInput } from "./media-picker-input";
 
 export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
   const [isPending, startTransition] = useTransition();
@@ -78,10 +79,9 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
         {sectionTitle("Logo do Site (Navbar)")}
         <div>
           <label style={labelStyle}>URL do logotipo PNG transparente</label>
-          <input
+          <MediaPickerInput
             name="siteLogoUrl"
-            type="url"
-            defaultValue={settings.siteLogoUrl ?? ""}
+            defaultValue={settings.siteLogoUrl}
             style={inputStyle}
             placeholder="https://... (PNG com fundo transparente)"
           />
@@ -108,10 +108,9 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
           </div>
           <div>
             <label style={labelStyle}>URL da imagem do hero</label>
-            <input
+            <MediaPickerInput
               name="heroImageUrl"
-              type="url"
-              defaultValue={settings.heroImageUrl ?? ""}
+              defaultValue={settings.heroImageUrl}
               style={inputStyle}
               placeholder="https://..."
             />
@@ -148,10 +147,9 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
           </div>
           <div className="md:col-span-2">
             <label style={labelStyle}>URL do logo PNG transparente (centro do hero)</label>
-            <input
+            <MediaPickerInput
               name="heroLogoUrl"
-              type="url"
-              defaultValue={settings.heroLogoUrl ?? ""}
+              defaultValue={settings.heroLogoUrl}
               style={inputStyle}
               placeholder="https://... (PNG com fundo transparente)"
             />
@@ -202,10 +200,9 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
           </div>
           <div>
             <label style={labelStyle}>URL da imagem do produto</label>
-            <input
+            <MediaPickerInput
               name="luminaImageUrl"
-              type="url"
-              defaultValue={settings.luminaImageUrl ?? ""}
+              defaultValue={settings.luminaImageUrl}
               style={inputStyle}
               placeholder="https://..."
             />
@@ -233,10 +230,9 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
           </div>
           <div>
             <label style={labelStyle}>URL da imagem</label>
-            <input
+            <MediaPickerInput
               name="aboutImageUrl"
-              type="url"
-              defaultValue={settings.aboutImageUrl ?? ""}
+              defaultValue={settings.aboutImageUrl}
               style={inputStyle}
               placeholder="https://..."
             />

@@ -3,6 +3,7 @@
 import { useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { createProduct, updateProduct } from "@/actions/admin";
+import { MediaPickerButton } from "./media-picker-button";
 
 interface ProductFormData {
   id: string;
@@ -282,13 +283,19 @@ export function ProductForm({ product, categories }: ProductFormProps) {
             style={{ ...inputStyle }}
             placeholder="https://... (URL da imagem)"
           />
+          <MediaPickerButton
+            onSelect={(url) => {
+              setImageUrls((prev) => [...prev, url]);
+              setNewUrl("");
+            }}
+          />
           <button
             type="button"
             onClick={addUrl}
             className="px-4 py-2 rounded-xl text-sm font-semibold shrink-0"
             style={{ backgroundColor: "rgba(201,162,39,0.15)", color: "#C9A227", border: "1px solid rgba(201,162,39,0.3)" }}
           >
-            + Adicionar
+            + URL
           </button>
         </div>
 
