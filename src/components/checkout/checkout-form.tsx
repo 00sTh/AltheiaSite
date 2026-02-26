@@ -63,12 +63,13 @@ function FocusInput(
   props: React.InputHTMLAttributes<HTMLInputElement> & { wrapperClass?: string }
 ) {
   const [focused, setFocused] = useState(false);
-  const { wrapperClass, ...rest } = props;
+  const { wrapperClass, style: externalStyle, ...rest } = props;
   return (
     <input
       {...rest}
       style={{
         ...inputStyle,
+        ...externalStyle,
         borderColor: focused ? "rgba(201,162,39,0.6)" : "rgba(201,162,39,0.25)",
         boxShadow: focused ? "0 0 10px rgba(201,162,39,0.1)" : "none",
       }}

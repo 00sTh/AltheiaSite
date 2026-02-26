@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { getServerAuth } from "@/lib/auth";
+import { getServerAuth, getServerUser } from "@/lib/auth";
 import {
   createCreditCardPayment,
   createPixPayment,
@@ -31,9 +31,22 @@ const addressSchema = z.object({
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
-async function getUserProfile(userId: string) {
-  return prisma.userProfile.findUnique({
+async function getOrCreateUserProfile(userId: string) {
+  const existing = await prisma.userProfile.findUnique({
     where: { clerkId: userId },
+    select: { id: true },
+  });
+  if (existing) return existing;
+
+  // Profile not found — create from Clerk (or demo) data
+  const user = await getServerUser();
+  type ClerkUser = { emailAddresses?: Array<{ emailAddress: string }> };
+  const email =
+    (user as ClerkUser)?.emailAddresses?.[0]?.emailAddress ??
+    `${userId}@altheia.com`;
+
+  return prisma.userProfile.create({
+    data: { clerkId: userId, email },
     select: { id: true },
   });
 }
@@ -93,14 +106,8 @@ export async function createOrder(
     }
   }
 
-  // Get user profile
-  const userProfile = await getUserProfile(userId);
-  if (!userProfile) {
-    return {
-      success: false,
-      error: "Perfil de usuário não encontrado. Faça login novamente.",
-    };
-  }
+  // Get or create user profile (creates on first order in demo mode)
+  const userProfile = await getOrCreateUserProfile(userId);
 
   const total = cart.items.reduce(
     (acc, item) => acc + Number(item.product.price) * item.quantity,
@@ -285,7 +292,10 @@ export async function getOrder(orderId: string) {
   const { userId } = await getServerAuth();
   if (!userId) return null;
 
-  const userProfile = await getUserProfile(userId);
+  const userProfile = await prisma.userProfile.findUnique({
+    where: { clerkId: userId },
+    select: { id: true },
+  });
   if (!userProfile) return null;
 
   return prisma.order.findUnique({

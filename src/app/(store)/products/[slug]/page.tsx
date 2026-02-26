@@ -35,7 +35,10 @@ export async function generateMetadata({
     title: product.name,
     description: truncate(product.description, 160),
     openGraph: {
-      images: product.images[0] ? [product.images[0]] : [],
+      images: (() => {
+        const imgs = parseImages(product.images as unknown as string);
+        return imgs[0] ? [imgs[0]] : [];
+      })(),
     },
   };
 }

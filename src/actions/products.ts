@@ -26,8 +26,22 @@ export async function getProducts(params: GetProductsParams = {}): Promise<{
     ...(categorySlug && { category: { slug: categorySlug } }),
     ...(search && {
       OR: [
-        { name: { contains: search, mode: "insensitive" as const } },
-        { description: { contains: search, mode: "insensitive" as const } },
+        {
+          name: {
+            contains: search,
+            ...((process.env.DATABASE_URL ?? "").startsWith("postgres") && {
+              mode: "insensitive" as const,
+            }),
+          },
+        },
+        {
+          description: {
+            contains: search,
+            ...((process.env.DATABASE_URL ?? "").startsWith("postgres") && {
+              mode: "insensitive" as const,
+            }),
+          },
+        },
       ],
     }),
   };
