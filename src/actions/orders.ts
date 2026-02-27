@@ -310,12 +310,30 @@ async function processPayment({
     const cardCvv = (formData.get("cardCvv") as string) ?? "";
     const installments = parseInt((formData.get("installments") as string) || "1", 10);
 
+    const brand = detectCardBrand(cardNumber);
+    if (!brand) {
+      await prisma.order.update({
+        where: { id: order.id },
+        data: { status: "CANCELLED" },
+      });
+      for (const item of items) {
+        await prisma.product.update({
+          where: { id: item.productId },
+          data: { stock: { increment: item.quantity } },
+        });
+      }
+      return {
+        success: false,
+        error: "Bandeira do cartão não reconhecida. Aceitamos Visa, Mastercard, Amex, Elo, Hipercard e Diners.",
+      };
+    }
+
     const card: CieloCreditCard = {
       CardNumber: cardNumber,
       Holder: cardHolder,
       ExpirationDate: cardExpiry,
       SecurityCode: cardCvv,
-      Brand: detectCardBrand(cardNumber),
+      Brand: brand,
     };
 
     let cieloResp;
@@ -364,10 +382,23 @@ async function processPayment({
           data: { stock: { increment: item.quantity } },
         });
       }
-      const msg = Payment.ReturnMessage ?? "Pagamento recusado";
-      return { success: false, error: `Cartão recusado: ${msg}. Verifique os dados ou tente outro cartão.` };
+      const code = Payment.ReturnCode ?? "";
+      const codeMap: Record<string, string> = {
+        "05": "Não autorizado pelo banco. Contate seu banco.",
+        "14": "Número do cartão inválido.",
+        "78": "Cartão vencido.",
+        "57": "Transação não permitida para este cartão.",
+        "62": "Cartão restrito a crédito.",
+        "63": "Violação de segurança.",
+        "99": "Erro interno. Tente novamente.",
+      };
+      const friendly = codeMap[code] ?? (Payment.ReturnMessage ?? "Pagamento recusado");
+      return { success: false, error: `Pagamento recusado: ${friendly} Verifique os dados ou tente outro cartão.` };
     }
 
+    // Status pendente (0=NotFinished, 12=Pending, 20=Scheduled):
+    // Pedido mantém status PENDING no banco.
+    // O webhook /api/webhooks/cielo atualizará para PAID quando confirmado.
     await prisma.order.update({
       where: { id: order.id },
       data: { cieloPaymentId: Payment.PaymentId },

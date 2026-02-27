@@ -93,8 +93,8 @@ export function toCentavos(priceInReais: number): number {
   return Math.round(priceInReais * 100);
 }
 
-/** Detecta bandeira pelo número do cartão */
-export function detectCardBrand(rawNumber: string): CieloCardBrand {
+/** Detecta bandeira pelo número do cartão. Retorna null se não reconhecida. */
+export function detectCardBrand(rawNumber: string): CieloCardBrand | null {
   const n = rawNumber.replace(/\D/g, "");
   if (/^4/.test(n)) return "Visa";
   if (/^(5[1-5]|2(2[2-9][1-9]|[3-6]\d{2}|7[01]\d|720))/.test(n)) return "Master";
@@ -102,7 +102,7 @@ export function detectCardBrand(rawNumber: string): CieloCardBrand {
   if (/^(636368|438935|504175|451416|636297|5067|4576|4011|506699)/.test(n)) return "Elo";
   if (/^6062/.test(n)) return "Hipercard";
   if (/^3(0[0-5]|[68])/.test(n)) return "Diners";
-  return "Visa"; // fallback
+  return null; // bandeira não reconhecida
 }
 
 // ─── Criação de pagamentos ────────────────────────────────────────────────────

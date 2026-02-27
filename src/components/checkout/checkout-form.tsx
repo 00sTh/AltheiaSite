@@ -88,6 +88,32 @@ function FocusInput(
 
 type PaymentMethod = "CREDIT_CARD" | "PIX" | "WHATSAPP";
 
+// ─── Card validators ──────────────────────────────────────────────────────────
+
+/** Detecta bandeira client-side (espelha cielo.ts — sem import do server) */
+function detectCardBrandClient(n: string): string | null {
+  if (/^4/.test(n)) return "Visa";
+  if (/^(5[1-5]|2(2[2-9][1-9]|[3-6]\d{2}|7[01]\d|720))/.test(n)) return "Mastercard";
+  if (/^3[47]/.test(n)) return "Amex";
+  if (/^(636368|438935|504175|451416|636297|5067|4576|4011|506699)/.test(n)) return "Elo";
+  if (/^6062/.test(n)) return "Hipercard";
+  if (/^3(0[0-5]|[68])/.test(n)) return "Diners";
+  return null;
+}
+
+/** Algoritmo de Luhn para validar número do cartão */
+function luhnCheck(n: string): boolean {
+  let sum = 0;
+  let alt = false;
+  for (let i = n.length - 1; i >= 0; i--) {
+    let d = parseInt(n[i], 10);
+    if (alt) { d *= 2; if (d > 9) d -= 9; }
+    sum += d;
+    alt = !alt;
+  }
+  return sum % 10 === 0;
+}
+
 // ─── Card formatters ──────────────────────────────────────────────────────────
 
 function formatCardNumber(val: string) {
@@ -203,6 +229,42 @@ export function CheckoutForm({ cart, isGuest = false }: CheckoutFormProps) {
         "guestItems",
         JSON.stringify(guestItems.map((i) => ({ productId: i.productId, quantity: i.quantity })))
       );
+    }
+
+    // ── Validações client-side para cartão de crédito ──────────────────────
+    if (method === "CREDIT_CARD") {
+      const rawCard = cardNumber.replace(/\s/g, "");
+
+      if (rawCard.length < 13 || !luhnCheck(rawCard)) {
+        setError("Número do cartão inválido.");
+        return;
+      }
+
+      const detectedBrand = detectCardBrandClient(rawCard);
+      if (!detectedBrand) {
+        setError("Bandeira do cartão não reconhecida. Aceitamos Visa, Mastercard, Amex, Elo, Hipercard e Diners.");
+        return;
+      }
+
+      const parts = cardExpiry.split("/");
+      const mm = parseInt(parts[0] ?? "0", 10);
+      const yyyy = parseInt(parts[1] ?? "0", 10);
+      const now = new Date();
+      if (
+        !mm || !yyyy || mm < 1 || mm > 12 ||
+        yyyy < now.getFullYear() ||
+        (yyyy === now.getFullYear() && mm < now.getMonth() + 1)
+      ) {
+        setError("Data de validade inválida ou cartão vencido.");
+        return;
+      }
+
+      const cardCvvValue = (formData.get("cardCvv") as string) ?? "";
+      const expectedCvvLen = detectedBrand === "Amex" ? 4 : 3;
+      if (cardCvvValue.length !== expectedCvvLen) {
+        setError(`CVV deve ter ${expectedCvvLen} dígitos para ${detectedBrand}.`);
+        return;
+      }
     }
 
     startTransition(async () => {
