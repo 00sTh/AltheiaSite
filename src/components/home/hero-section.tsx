@@ -67,7 +67,7 @@ function VideoBackground({ url }: { url: string }) {
       muted
       loop
       playsInline
-      preload="none"
+      preload="metadata"
       className="absolute inset-0 w-full h-full object-cover pointer-events-none"
     >
       <source src={url} />
@@ -359,7 +359,7 @@ function LegacyHero({
         </>
       ) : heroImageUrl ? (
         <>
-          <Image src={heroImageUrl} alt="Hero" fill priority className="object-cover" />
+          <Image src={heroImageUrl} alt="Hero" fill priority sizes="100vw" className="object-cover" />
           <div
             className="absolute inset-0"
             style={{ backgroundColor: "rgba(10,61,47,0.60)" }}

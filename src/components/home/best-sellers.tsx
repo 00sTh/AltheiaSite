@@ -6,8 +6,8 @@ import { SectionTitle } from "@/components/ui/section-title";
 import { GoldButton } from "@/components/ui/gold-button";
 
 export async function BestSellers() {
-  const { products } = await getProducts({ featured: true });
-  const display = products.slice(0, 4);
+  const { products } = await getProducts({ featured: true, take: 4 });
+  const display = products;
 
   if (display.length === 0) return null;
 

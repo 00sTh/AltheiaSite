@@ -62,16 +62,12 @@ export default async function ProductPage({ params }: ProductPageProps) {
   const images = parseImages(product.images as unknown as string);
   const mainImage = images[0] ?? "/placeholder.svg";
 
-  // Check wishlist state if user is logged in
-  const inWishlist = userId ? await isInWishlist(product.id) : false;
-
-  // Related products (same category, excluding current)
-  const { products: related } = await getProducts({
-    categorySlug: product.category.slug,
-  });
-  const relatedProducts = related
-    .filter((p) => p.id !== product.id)
-    .slice(0, 4);
+  // Fetch wishlist state and related products in parallel
+  const [inWishlist, { products: related }] = await Promise.all([
+    userId ? isInWishlist(product.id) : Promise.resolve(false),
+    getProducts({ categorySlug: product.category.slug, take: 5 }),
+  ]);
+  const relatedProducts = related.filter((p) => p.id !== product.id).slice(0, 4);
 
   const shippingThreshold = formatPrice(Number(settings.shippingFreeThreshold));
 

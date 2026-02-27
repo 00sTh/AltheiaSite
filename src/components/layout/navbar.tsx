@@ -3,8 +3,16 @@ import { getServerAuth } from "@/lib/auth";
 import { NavbarClient } from "./navbar-client";
 
 async function getNavData() {
-  const { userId, sessionClaims } = await getServerAuth();
+  const [{ userId, sessionClaims }, settings] = await Promise.all([
+    getServerAuth(),
+    prisma.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { siteLogoUrl: true },
+    }),
+  ]);
+
   const isAdmin = sessionClaims?.metadata?.role === "admin";
+  const siteLogoUrl = settings?.siteLogoUrl ?? null;
 
   let cartCount = 0;
   if (userId) {
@@ -14,9 +22,6 @@ async function getNavData() {
     });
     cartCount = cart?.items.reduce((acc, item) => acc + item.quantity, 0) ?? 0;
   }
-
-  const settings = await prisma.siteSettings.findUnique({ where: { id: "default" } });
-  const siteLogoUrl = settings?.siteLogoUrl ?? null;
 
   return { userId, isAdmin, cartCount, siteLogoUrl };
 }

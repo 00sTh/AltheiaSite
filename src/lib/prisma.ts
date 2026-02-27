@@ -47,6 +47,4 @@ function getOrCreateClient(): PrismaClientSingleton {
 /** Singleton do Prisma — evita múltiplas instâncias em dev com hot-reload */
 export const prisma: PrismaClientSingleton = getOrCreateClient();
 
-if (process.env.NODE_ENV !== "production") {
-  globalForPrisma.prisma = prisma;
-}
+globalForPrisma.prisma = prisma;

@@ -10,6 +10,7 @@ interface GetProductsParams {
   page?: number;
   featured?: boolean;
   search?: string;
+  take?: number;
 }
 
 /** Retorna produtos com paginação e filtros opcionais */
@@ -18,7 +19,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<{
   total: number;
   pages: number;
 }> {
-  const { categorySlug, page = 1, featured, search } = params;
+  const { categorySlug, page = 1, featured, search, take } = params;
 
   const where = {
     active: true,
@@ -51,7 +52,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<{
       where,
       include: { category: true },
       orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-      take: PRODUCTS_PER_PAGE,
+      take: take ?? PRODUCTS_PER_PAGE,
       skip: (page - 1) * PRODUCTS_PER_PAGE,
     }),
     prisma.product.count({ where }),

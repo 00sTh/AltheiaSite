@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { getServerAuth } from "@/lib/auth";
 import { uploadImage, deleteImage } from "@/lib/blob";
@@ -19,13 +20,13 @@ async function requireAdmin() {
 
 // ─── SiteSettings ────────────────────────────────────────────────────────────
 
-export async function getSiteSettings() {
+export const getSiteSettings = cache(async () => {
   return prisma.siteSettings.upsert({
     where: { id: "default" },
     create: { id: "default" },
     update: {},
   });
-}
+});
 
 // Aceita URL absoluta (https://...) OU caminho relativo (/uploads/...) OU vazio
 const imageUrl = z

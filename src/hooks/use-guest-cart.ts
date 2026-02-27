@@ -64,13 +64,11 @@ export function useGuestCartSync(): void {
     if (guestItems.length === 0) return;
 
     async function syncToDatabase() {
-      for (const item of guestItems) {
-        try {
-          await addToCart({ productId: item.productId, quantity: item.quantity });
-        } catch (err) {
-          console.warn(`[guest-cart] falha ao migrar produto ${item.productId}:`, err);
-        }
-      }
+      await Promise.allSettled(
+        guestItems.map((item) =>
+          addToCart({ productId: item.productId, quantity: item.quantity })
+        )
+      );
       clearGuestCart();
     }
 
