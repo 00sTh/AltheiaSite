@@ -266,3 +266,16 @@ model NewsletterSubscriber {
   @@index([email])
   @@map("newsletter_subscribers")
 }
+
+/// Log de erros capturados pela aplicação
+model ErrorLog {
+  id        String   @id @default(uuid())
+  digest    String?
+  message   String
+  stack     String?
+  path      String?
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
+  @@map("error_logs")
+}

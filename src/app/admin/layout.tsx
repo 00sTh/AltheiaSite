@@ -10,6 +10,7 @@ import {
   Image,
   Tag,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
@@ -21,6 +22,7 @@ const navItems = [
   { href: "/admin/orders", label: "Pedidos", icon: ShoppingCart },
   { href: "/admin/settings", label: "Configurações", icon: Settings },
   { href: "/admin/newsletter", label: "Newsletter", icon: Mail },
+  { href: "/admin/logs", label: "Logs de Erro", icon: AlertTriangle },
 ];
 
 export default async function AdminLayout({

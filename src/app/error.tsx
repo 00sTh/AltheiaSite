@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { AlertTriangle, RefreshCw, Home } from "lucide-react";
 import Link from "next/link";
+import { logErrorAction } from "@/actions/log-error";
 
 interface ErrorPageProps {
   error: Error & { digest?: string };
@@ -12,8 +13,10 @@ interface ErrorPageProps {
 /** Error boundary global — captura erros não tratados em Server Components */
 export default function ErrorPage({ error, reset }: ErrorPageProps) {
   useEffect(() => {
-    // Em produção, enviar para serviço de monitoramento (ex: Sentry)
     console.error(error);
+    if (error.digest) {
+      logErrorAction(error.digest, window.location.pathname).catch(() => {});
+    }
   }, [error]);
 
   return (

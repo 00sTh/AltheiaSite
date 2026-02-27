@@ -18,11 +18,10 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({ error: "CEP inválido" }, { status: 400 });
   }
 
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const settings = await (prisma.siteSettings as any).findUnique({
+  const settings = await prisma.siteSettings.findUnique({
     where: { id: "default" },
     select: { cepOrigem: true, pesoMedioProduto: true },
-  }) as { cepOrigem: string; pesoMedioProduto: number } | null;
+  });
 
   const cepOrigem = settings?.cepOrigem ?? "01310100";
   const pesoUnitario = settings?.pesoMedioProduto ?? 300;

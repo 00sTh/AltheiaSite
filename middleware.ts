@@ -1,46 +1,32 @@
 /**
- * middleware.ts
+ * middleware.ts — Auth (Clerk) + Security headers
  *
- * DEMO_MODE=true  → auth próprio via cookie site_session
- * DEMO_MODE=false → Clerk middleware
+ * Rotas públicas: /, /sign-in, /sign-up, /products, /sobre-nos,
+ *   /videos, /politica-de-privacidade, /termos-de-uso, /loja,
+ *   /api/newsletter, /api/webhooks, /api/check-payment, /api/frete
+ *
+ * Rotas admin: exige userId + role === "admin"
+ * Rotas protegidas: /account, /cart, /checkout, /wishlist — exige userId
  */
-import { NextResponse, type NextRequest } from "next/server";
+import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { NextResponse } from "next/server";
 
-const DEMO_MODE = process.env.DEMO_MODE === "true";
-
-// Rotas sempre públicas (sem auth)
-const PUBLIC_PREFIXES = [
+const isPublicRoute = createRouteMatcher([
   "/",
-  "/products",
-  "/sobre-nos",
-  "/videos",
-  "/politica-de-privacidade",
-  "/termos-de-uso",
-  "/loja",
-  "/api/newsletter",
-  "/api/webhooks",
-  "/api/check-payment",
-  "/robots.txt",
-  "/sitemap.xml",
-  "/_next",
-  "/favicon",
-];
-
-// Rotas de auth (sem proteção)
-const AUTH_PATHS = ["/sign-in", "/sign-up", "/admin/login", "/verificar-email"];
-
-function isPublicPath(pathname: string): boolean {
-  if (pathname === "/") return true;
-  return PUBLIC_PREFIXES.some(
-    (p) => p !== "/" && (pathname === p || pathname.startsWith(p + "/") || pathname.startsWith(p + "?"))
-  );
-}
-
-function isAuthPath(pathname: string): boolean {
-  return AUTH_PATHS.some(
-    (p) => pathname === p || pathname.startsWith(p + "/")
-  );
-}
+  "/sign-in(.*)",
+  "/sign-up(.*)",
+  "/products(.*)",
+  "/sobre-nos(.*)",
+  "/videos(.*)",
+  "/politica-de-privacidade(.*)",
+  "/termos-de-uso(.*)",
+  "/loja(.*)",
+  "/acesso-negado(.*)",
+  "/api/newsletter(.*)",
+  "/api/webhooks(.*)",
+  "/api/check-payment(.*)",
+  "/api/frete(.*)",
+]);
 
 function withSecurityHeaders(res: NextResponse): NextResponse {
   res.headers.set("X-Content-Type-Options", "nosniff");
@@ -50,81 +36,34 @@ function withSecurityHeaders(res: NextResponse): NextResponse {
   return res;
 }
 
-function demoMiddleware(req: NextRequest): NextResponse {
-  const { pathname } = req.nextUrl;
+export default clerkMiddleware(async (auth, request) => {
+  const { userId, sessionClaims } = await auth();
+  const pathname = request.nextUrl.pathname;
 
-  // Sempre permite arquivos estáticos e auth pages
-  if (isAuthPath(pathname)) return withSecurityHeaders(NextResponse.next());
-  if (isPublicPath(pathname)) return withSecurityHeaders(NextResponse.next());
-
-  // Verificar presença do cookie (verificação completa é feita em server components)
-  const session = req.cookies.get("site_session")?.value;
-
-  if (!session) {
-    if (pathname.startsWith("/admin")) {
-      return withSecurityHeaders(NextResponse.redirect(new URL("/admin/login", req.url)));
+  if (pathname.startsWith("/admin")) {
+    if (!userId) {
+      return withSecurityHeaders(
+        NextResponse.redirect(new URL("/sign-in?redirect_url=/admin", request.url))
+      );
     }
+    const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
+    if (role !== "admin") {
+      return withSecurityHeaders(
+        NextResponse.redirect(new URL("/acesso-negado", request.url))
+      );
+    }
+  }
+
+  if (!isPublicRoute(request) && !userId) {
     return withSecurityHeaders(
       NextResponse.redirect(
-        new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, req.url)
+        new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, request.url)
       )
     );
   }
 
   return withSecurityHeaders(NextResponse.next());
-}
-
-async function clerkMiddleware(req: NextRequest) {
-  const { clerkMiddleware: clerk, createRouteMatcher } =
-    await import("@clerk/nextjs/server");
-
-  const isPublicRoute = createRouteMatcher([
-    "/",
-    "/sign-in(.*)",
-    "/sign-up(.*)",
-    "/products(.*)",
-    "/sobre-nos(.*)",
-    "/videos(.*)",
-    "/politica-de-privacidade(.*)",
-    "/termos-de-uso(.*)",
-    "/loja(.*)",
-    "/api/newsletter(.*)",
-    "/api/webhooks(.*)",
-    "/api/check-payment(.*)",
-  ]);
-
-  const handler = clerk(async (auth, request) => {
-    const { userId, sessionClaims } = await auth();
-    const pathname = request.nextUrl.pathname;
-
-    if (pathname.startsWith("/admin")) {
-      if (!userId) {
-        return NextResponse.redirect(new URL("/sign-in?redirect_url=/admin", request.url));
-      }
-      const role = (sessionClaims?.metadata as { role?: string } | undefined)?.role;
-      if (role !== "admin") {
-        return NextResponse.redirect(new URL("/", request.url));
-      }
-    }
-
-    if (!isPublicRoute(request) && !userId) {
-      return NextResponse.redirect(
-        new URL(`/sign-in?redirect_url=${encodeURIComponent(pathname)}`, request.url)
-      );
-    }
-
-    return withSecurityHeaders(NextResponse.next());
-  });
-
-  return handler(req, {} as never);
-}
-
-export default async function middleware(req: NextRequest) {
-  if (DEMO_MODE) {
-    return demoMiddleware(req);
-  }
-  return clerkMiddleware(req);
-}
+});
 
 export const config = {
   matcher: [
