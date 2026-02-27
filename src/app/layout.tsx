@@ -29,9 +29,6 @@ export const metadata: Metadata = {
     template: `%s | ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
-  icons: {
-    icon: "/uploads/a.ico",
-  },
   openGraph: {
     type: "website",
     locale: "pt_BR",
