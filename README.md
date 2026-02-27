@@ -168,36 +168,9 @@ git push -u origin main
 3. Build Command: `npm run build`
 4. Output Directory: `.next`
 
-### 3. Variáveis de Ambiente (Vercel → Settings → Environment Variables)
-
-```env
-# Banco — Neon PostgreSQL
-DATABASE_URL=postgresql://user:pass@ep-xxx.neon.tech/altheia?sslmode=require&pgbouncer=true
-DIRECT_URL=postgresql://user:pass@ep-xxx.neon.tech/altheia?sslmode=require
-
-# Clerk (produção)
-NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_live_...
-CLERK_SECRET_KEY=sk_live_...
-NEXT_PUBLIC_CLERK_SIGN_IN_URL=/sign-in
-NEXT_PUBLIC_CLERK_SIGN_UP_URL=/sign-up
-NEXT_PUBLIC_CLERK_AFTER_SIGN_IN_URL=/
-NEXT_PUBLIC_CLERK_AFTER_SIGN_UP_URL=/
-
-# Stripe (produção)
-NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=pk_live_...
-STRIPE_SECRET_KEY=sk_live_...
-STRIPE_WEBHOOK_SECRET=whsec_...
-
-# App
-NEXT_PUBLIC_APP_URL=https://altheia.com.br
-
-# Vercel Blob (upload de imagens)
-BLOB_READ_WRITE_TOKEN=vercel_blob_rw_...
-```
-
 > ⚠️ **NÃO incluir** `DEMO_MODE=true` em produção.
 
-### 4. Banco de dados — Neon PostgreSQL
+### 3. Banco de dados — Neon PostgreSQL
 
 1. Criar conta em https://neon.tech
 2. New Project → copiar Connection Strings
@@ -231,14 +204,14 @@ DATABASE_URL="..." DIRECT_URL="..." npx prisma migrate deploy
 npx tsx prisma/seed.ts   # opcional: dados de exemplo
 ```
 
-### 5. Vercel Blob (imagens de produtos)
+### 4. Vercel Blob (imagens de produtos)
 
 1. Vercel Dashboard → Storage → Create Store → Blob
 2. Conectar ao projeto
 3. Copiar `BLOB_READ_WRITE_TOKEN`
 4. Descomentar código em `src/lib/blob.ts` (substituir placeholder)
 
-### 6. Stripe Webhook (produção)
+### 5. Stripe Webhook (produção)
 
 1. Stripe Dashboard → Developers → Webhooks → Add Endpoint
 2. URL: `https://altheia.com.br/api/webhooks/stripe`
