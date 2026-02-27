@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
+import { useState, useTransition, useRef, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Loader2,
@@ -8,13 +8,20 @@ import {
   QrCode,
   MessageCircle,
   ChevronDown,
+  ShoppingCart,
+  ArrowRight,
 } from "lucide-react";
-import { formatPrice } from "@/lib/utils";
+import Link from "next/link";
+import { formatPrice, parseImages } from "@/lib/utils";
 import { createOrder } from "@/actions/orders";
+import { getProductsByIds } from "@/actions/products";
+import { getGuestCart, clearGuestCart, type GuestCartItem } from "@/hooks/use-guest-cart";
+import { ProductImage } from "@/components/ui/product-image";
 import type { CartWithItems } from "@/types";
 
 interface CheckoutFormProps {
-  cart: CartWithItems;
+  cart: CartWithItems | null;
+  isGuest?: boolean;
 }
 
 // ─── Styles ────────────────────────────────────────────────────────────────────
@@ -93,30 +100,109 @@ function formatExpiry(val: string) {
   return `${digits.slice(0, 2)}/${digits.slice(2)}`;
 }
 
+function formatCpf(val: string) {
+  const digits = val.replace(/\D/g, "").slice(0, 11);
+  if (digits.length <= 3) return digits;
+  if (digits.length <= 6) return `${digits.slice(0, 3)}.${digits.slice(3)}`;
+  if (digits.length <= 9) return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6)}`;
+  return `${digits.slice(0, 3)}.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+// ─── Guest Cart Types ─────────────────────────────────────────────────────────
+
+type ProductData = {
+  id: string;
+  name: string;
+  price: { toString(): string };
+  images: string[];
+  stock: number;
+  slug: string;
+};
+
+type EnrichedGuestItem = GuestCartItem & { product: ProductData };
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export function CheckoutForm({ cart }: CheckoutFormProps) {
+export function CheckoutForm({ cart, isGuest = false }: CheckoutFormProps) {
   const router = useRouter();
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [method, setMethod] = useState<PaymentMethod>("PIX");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
+  const [cpf, setCpf] = useState("");
   const formRef = useRef<HTMLFormElement>(null);
 
-  const total = cart.items.reduce(
-    (acc, item) => acc + Number(item.product.price) * item.quantity,
-    0
-  );
+  // Guest cart state
+  const [guestItems, setGuestItems] = useState<GuestCartItem[]>([]);
+  const [guestProducts, setGuestProducts] = useState<ProductData[]>([]);
+  const [guestLoading, setGuestLoading] = useState(isGuest);
+
+  useEffect(() => {
+    if (!isGuest) return;
+    const items = getGuestCart();
+    setGuestItems(items);
+    if (items.length > 0) {
+      getProductsByIds(items.map((i) => i.productId))
+        .then((p) => setGuestProducts(p as ProductData[]))
+        .finally(() => setGuestLoading(false));
+    } else {
+      setGuestLoading(false);
+    }
+  }, [isGuest]);
+
+  // Build enriched cart lines (same structure for auth + guest)
+  const enrichedGuest: EnrichedGuestItem[] = guestItems
+    .map((item) => {
+      const product = guestProducts.find((p) => p.id === item.productId);
+      if (!product) return null;
+      return { ...item, product };
+    })
+    .filter(Boolean) as EnrichedGuestItem[];
+
+  const cartLines = isGuest
+    ? enrichedGuest.map((i) => ({
+        name: i.product.name,
+        quantity: i.quantity,
+        price: Number(i.product.price),
+        images: i.product.images,
+      }))
+    : (cart?.items ?? []).map((i) => ({
+        name: i.product.name,
+        quantity: i.quantity,
+        price: Number(i.product.price),
+        images: i.product.images as string[],
+      }));
+
+  const total = cartLines.reduce((acc, i) => acc + i.price * i.quantity, 0);
 
   function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
+
+    // Validate cart has items
+    if (cartLines.length === 0) {
+      setError("Seu carrinho está vazio.");
+      return;
+    }
+
     const formData = new FormData(e.currentTarget);
-    // Inject raw card number (digits only) for server
+
+    // Inject formatted card fields
     if (method === "CREDIT_CARD") {
       formData.set("cardNumber", cardNumber.replace(/\s/g, ""));
       formData.set("cardExpiry", cardExpiry);
+    }
+
+    // Inject CPF (digits only)
+    formData.set("cpf", cpf.replace(/\D/g, ""));
+
+    // Inject guest cart items for server-side processing
+    if (isGuest) {
+      formData.set(
+        "guestItems",
+        JSON.stringify(guestItems.map((i) => ({ productId: i.productId, quantity: i.quantity })))
+      );
     }
 
     startTransition(async () => {
@@ -126,6 +212,9 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
         setError(result.error);
         return;
       }
+
+      // Clear guest cart on success
+      if (isGuest) clearGuestCart();
 
       if (result.type === "paid") {
         router.push(`/checkout/sucesso?orderId=${result.orderId}&paid=1`);
@@ -137,7 +226,6 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
         });
         router.push(`/checkout/pix?${params.toString()}`);
       } else {
-        // whatsapp
         router.push(`/checkout/sucesso?orderId=${result.orderId}`);
       }
     });
@@ -154,21 +242,13 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
       onClick={() => setMethod(m)}
       className="flex items-start gap-3 rounded-xl p-4 text-left transition-all w-full"
       style={{
-        border: method === m
-          ? "2px solid #C9A227"
-          : "1px solid rgba(201,162,39,0.2)",
-        backgroundColor: method === m
-          ? "rgba(201,162,39,0.08)"
-          : "rgba(15,74,55,0.4)",
+        border: method === m ? "2px solid #C9A227" : "1px solid rgba(201,162,39,0.2)",
+        backgroundColor: method === m ? "rgba(201,162,39,0.08)" : "rgba(15,74,55,0.4)",
       }}
     >
       <div
         className="h-9 w-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-        style={{
-          backgroundColor: method === m
-            ? "rgba(201,162,39,0.15)"
-            : "rgba(201,162,39,0.07)",
-        }}
+        style={{ backgroundColor: method === m ? "rgba(201,162,39,0.15)" : "rgba(201,162,39,0.07)" }}
       >
         <Icon className="h-4.5 w-4.5" style={{ color: "#C9A227" }} />
       </div>
@@ -186,6 +266,68 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
       )}
     </button>
   );
+
+  // ── Guest loading state ──────────────────────────────────────────────────────
+
+  if (isGuest && guestLoading) {
+    return (
+      <div className="p-6 space-y-4" style={{ backgroundColor: "#0F4A37" }}>
+        {[1, 2, 3].map((i) => (
+          <div
+            key={i}
+            className="h-12 rounded-xl animate-pulse"
+            style={{ backgroundColor: "rgba(201,162,39,0.08)" }}
+          />
+        ))}
+      </div>
+    );
+  }
+
+  // ── Guest with empty cart ────────────────────────────────────────────────────
+
+  if (isGuest && cartLines.length === 0) {
+    return (
+      <div
+        className="p-10 text-center space-y-4"
+        style={{ backgroundColor: "#0F4A37" }}
+      >
+        <ShoppingCart className="h-12 w-12 mx-auto" style={{ color: "rgba(201,162,39,0.3)" }} />
+        <p className="font-serif text-xl" style={{ color: "#F5F0E6" }}>
+          Seu carrinho está vazio
+        </p>
+        <Link
+          href="/products"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold"
+          style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+        >
+          Explorar produtos <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
+
+  // ── Auth user with empty DB cart ─────────────────────────────────────────────
+
+  if (!isGuest && cartLines.length === 0) {
+    return (
+      <div
+        className="p-10 text-center space-y-4"
+        style={{ backgroundColor: "#0F4A37" }}
+      >
+        <ShoppingCart className="h-12 w-12 mx-auto" style={{ color: "rgba(201,162,39,0.3)" }} />
+        <p className="font-serif text-xl" style={{ color: "#F5F0E6" }}>
+          Seu carrinho está vazio
+        </p>
+        <Link
+          href="/products"
+          className="inline-flex items-center gap-2 px-6 py-3 rounded-full text-sm font-semibold"
+          style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+        >
+          Explorar produtos <ArrowRight className="h-4 w-4" />
+        </Link>
+      </div>
+    );
+  }
 
   return (
     <form
@@ -218,14 +360,26 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
         <h3 className="font-serif font-semibold" style={{ color: "#F5F0E6" }}>
           Resumo do Pedido
         </h3>
-        {cart.items.map((item) => (
-          <div key={item.id} className="flex justify-between text-sm" style={{ color: "#C8BBA8" }}>
-            <span>{item.product.name} × {item.quantity}</span>
-            <span style={{ color: "#F5F0E6" }}>
-              {formatPrice(Number(item.product.price) * item.quantity)}
-            </span>
-          </div>
-        ))}
+        {cartLines.map((item, idx) => {
+          const imgs = parseImages(item.images as unknown as string);
+          const img = imgs[0] ?? "/placeholder.svg";
+          return (
+            <div key={idx} className="flex items-center gap-3">
+              <div
+                className="relative h-10 w-10 shrink-0 rounded-lg overflow-hidden"
+                style={{ backgroundColor: "#145A43" }}
+              >
+                <ProductImage src={img} alt={item.name} fill className="object-cover" />
+              </div>
+              <span className="flex-1 text-sm" style={{ color: "#C8BBA8" }}>
+                {item.name} × {item.quantity}
+              </span>
+              <span className="text-sm" style={{ color: "#F5F0E6" }}>
+                {formatPrice(item.price * item.quantity)}
+              </span>
+            </div>
+          );
+        })}
         <div
           className="pt-3 flex justify-between font-bold"
           style={{ borderTop: "1px solid rgba(201,162,39,0.15)" }}
@@ -235,7 +389,7 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
         </div>
       </div>
 
-      {/* Personal + Address */}
+      {/* Personal data */}
       <div className="space-y-4">
         <h3 className="label-luxury" style={{ color: "#C9A227" }}>Dados de Contato</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -245,12 +399,24 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
           <Field label="E-mail *">
             <FocusInput name="email" type="email" placeholder="ana@email.com" required />
           </Field>
-          <Field label="WhatsApp / Telefone">
+          <Field label="CPF *">
+            <FocusInput
+              name="cpfDisplay"
+              value={cpf}
+              onChange={(e) => setCpf(formatCpf(e.target.value))}
+              placeholder="000.000.000-00"
+              inputMode="numeric"
+              required
+              maxLength={14}
+            />
+          </Field>
+          <Field label="WhatsApp / Telefone" className="sm:col-span-2">
             <FocusInput name="phone" type="tel" placeholder="(11) 99999-9999" />
           </Field>
         </div>
       </div>
 
+      {/* Address */}
       <div className="space-y-4">
         <h3 className="label-luxury" style={{ color: "#C9A227" }}>Endereço de Entrega</h3>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -372,8 +538,7 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
           </Field>
 
           <p className="text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
-            🔒 Seus dados de cartão são enviados diretamente para a Cielo via conexão segura
-            (TLS 1.3) e nunca são armazenados em nossos servidores.
+            🔒 Seus dados de cartão são enviados diretamente para a Cielo via conexão segura (TLS 1.3) e nunca são armazenados em nossos servidores.
           </p>
         </div>
       )}
@@ -393,8 +558,7 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
               Pagamento instantâneo via PIX
             </p>
             <p className="text-xs" style={{ color: "rgba(200,187,168,0.65)" }}>
-              Após confirmar, você receberá um QR Code PIX. O pagamento é processado em
-              segundos e o pedido é confirmado automaticamente.
+              Após confirmar, você receberá um QR Code PIX. O pagamento é processado em segundos e o pedido é confirmado automaticamente.
             </p>
           </div>
         </div>
@@ -415,8 +579,7 @@ export function CheckoutForm({ cart }: CheckoutFormProps) {
               Finalizar via WhatsApp
             </p>
             <p className="text-xs" style={{ color: "rgba(200,187,168,0.65)" }}>
-              Seu pedido será registrado e você será redirecionado para o WhatsApp para combinar
-              o pagamento (PIX/transferência/boleto) com nossa equipe.
+              Seu pedido será registrado e você será redirecionado para o WhatsApp para combinar o pagamento com nossa equipe.
             </p>
           </div>
         </div>

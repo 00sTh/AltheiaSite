@@ -3,8 +3,10 @@ import type { Metadata } from "next";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { CartItemCard } from "@/components/cart/cart-item";
 import { ShippingCalculator } from "@/components/cart/shipping-calculator";
+import { GuestCartView } from "@/components/cart/guest-cart-view";
 import { getCart } from "@/actions/cart";
 import { getSiteSettings } from "@/actions/admin";
+import { getServerAuth } from "@/lib/auth";
 import { formatPrice } from "@/lib/utils";
 
 export const metadata: Metadata = {
@@ -12,6 +14,9 @@ export const metadata: Metadata = {
 };
 
 export default async function CartPage() {
+  const { userId } = await getServerAuth();
+  if (!userId) return <GuestCartView />;
+
   const [cart, settings] = await Promise.all([getCart(), getSiteSettings()]);
   const items = cart?.items ?? [];
   const threshold = Number(settings.shippingFreeThreshold);

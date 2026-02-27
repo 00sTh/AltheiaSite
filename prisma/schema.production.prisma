@@ -138,14 +138,15 @@ model Order {
   customerName    String?
   customerEmail   String?
   customerPhone   String?
+  customerCpf     String?
   /// JSON: { street, number, complement, city, state, zip }
   shippingAddress String?
   notes           String?
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
 
-  userProfileId String
-  userProfile   UserProfile @relation(fields: [userProfileId], references: [id])
+  userProfileId String?
+  userProfile   UserProfile? @relation(fields: [userProfileId], references: [id])
   items         OrderItem[]
 
   @@index([userProfileId])

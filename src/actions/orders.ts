@@ -6,7 +6,6 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod } from "@prisma/client";
 import { getServerAuth, getServerUser } from "@/lib/auth";
-import { sendNewOrderNotification, sendOrderConfirmationToCustomer } from "@/lib/mailer";
 import {
   createCreditCardPayment,
   createPixPayment,
@@ -21,6 +20,11 @@ import {
 const addressSchema = z.object({
   name: z.string().min(2).max(100),
   email: z.string().email(),
+  cpf: z
+    .string()
+    .optional()
+    .transform((v) => (v ?? "").replace(/\D/g, ""))
+    .refine((v) => v.length === 0 || v.length === 11, "CPF deve ter 11 dígitos"),
   phone: z.string().min(8).max(20).optional().or(z.literal("")),
   street: z.string().min(2).max(200),
   number: z.string().min(1).max(20),
@@ -31,6 +35,13 @@ const addressSchema = z.object({
   notes: z.string().max(500).optional().or(z.literal("")),
 });
 
+const guestItemSchema = z.array(
+  z.object({
+    productId: z.string().uuid(),
+    quantity: z.number().int().positive(),
+  })
+);
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 async function getOrCreateUserProfile(userId: string) {
@@ -40,12 +51,10 @@ async function getOrCreateUserProfile(userId: string) {
   });
   if (existing) return existing;
 
-  // Profile not found — create from Clerk (or demo) data
   const user = await getServerUser();
   type ClerkUser = { emailAddresses?: Array<{ emailAddress: string }> };
   const email =
-    (user as ClerkUser)?.emailAddresses?.[0]?.emailAddress ??
-    `${userId}@altheia.com`;
+    (user as ClerkUser)?.emailAddresses?.[0]?.emailAddress ?? `${userId}@altheia.com`;
 
   return prisma.userProfile.create({
     data: { clerkId: userId, email },
@@ -80,7 +89,6 @@ export async function createOrder(
   | { success: true; type: "whatsapp"; orderId: string }
 > {
   const { userId } = await getServerAuth();
-  if (!userId) redirect("/sign-in");
 
   // Validate address fields
   const raw = Object.fromEntries(formData.entries());
@@ -92,7 +100,106 @@ export async function createOrder(
 
   const paymentMethod = (formData.get("paymentMethod") as string) || "WHATSAPP";
 
-  // Get cart
+  const shippingAddress = JSON.stringify({
+    street: d.street,
+    number: d.number,
+    complement: d.complement || null,
+    city: d.city,
+    state: d.state,
+    zip: d.zip,
+  });
+
+  // ── Guest checkout ──────────────────────────────────────────────────────────
+  if (!userId) {
+    const guestItemsRaw = formData.get("guestItems") as string | null;
+    if (!guestItemsRaw) {
+      return { success: false, error: "Carrinho vazio" };
+    }
+
+    let guestItems: { productId: string; quantity: number }[];
+    try {
+      guestItems = guestItemSchema.parse(JSON.parse(guestItemsRaw));
+    } catch {
+      return { success: false, error: "Dados do carrinho inválidos" };
+    }
+
+    if (guestItems.length === 0) {
+      return { success: false, error: "Carrinho vazio" };
+    }
+
+    // Validate stock + get prices
+    const productIds = guestItems.map((i) => i.productId);
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds }, active: true },
+      select: { id: true, price: true, stock: true, name: true },
+    });
+
+    for (const item of guestItems) {
+      const product = products.find((p) => p.id === item.productId);
+      if (!product) {
+        return { success: false, error: "Produto não encontrado ou indisponível" };
+      }
+      if (product.stock < item.quantity) {
+        return { success: false, error: `Estoque insuficiente para "${product.name}"` };
+      }
+    }
+
+    const total = guestItems.reduce((acc, item) => {
+      const product = products.find((p) => p.id === item.productId)!;
+      return acc + Number(product.price) * item.quantity;
+    }, 0);
+
+    const order = await prisma.$transaction(async (tx) => {
+      const created = await tx.order.create({
+        data: {
+          status: "PENDING",
+          price: total,
+          paymentMethod: paymentMethod as PaymentMethod,
+          customerName: d.name,
+          customerEmail: d.email,
+          customerPhone: d.phone || null,
+          customerCpf: d.cpf || null,
+          shippingAddress,
+          notes: d.notes || null,
+          userProfileId: null,
+          items: {
+            create: guestItems.map((item) => {
+              const product = products.find((p) => p.id === item.productId)!;
+              return {
+                productId: item.productId,
+                quantity: item.quantity,
+                price: Number(product.price),
+              };
+            }),
+          },
+        },
+      });
+
+      for (const item of guestItems) {
+        await tx.product.update({
+          where: { id: item.productId },
+          data: { stock: { decrement: item.quantity } },
+        });
+      }
+
+      return created;
+    });
+
+    // Process payment (same logic as auth users)
+    return await processPayment({
+      order,
+      paymentMethod,
+      formData,
+      d,
+      total,
+      items: guestItems.map((item) => {
+        const product = products.find((p) => p.id === item.productId)!;
+        return { productId: item.productId, quantity: item.quantity, price: Number(product.price) };
+      }),
+    });
+  }
+
+  // ── Authenticated checkout ──────────────────────────────────────────────────
   const cart = await getCartWithItems(userId);
   if (!cart || cart.items.length === 0) {
     return { success: false, error: "Carrinho vazio" };
@@ -108,24 +215,12 @@ export async function createOrder(
     }
   }
 
-  // Get or create user profile (creates on first order in demo mode)
   const userProfile = await getOrCreateUserProfile(userId);
-
   const total = cart.items.reduce(
     (acc, item) => acc + Number(item.product.price) * item.quantity,
     0
   );
 
-  const shippingAddress = JSON.stringify({
-    street: d.street,
-    number: d.number,
-    complement: d.complement || null,
-    city: d.city,
-    state: d.state,
-    zip: d.zip,
-  });
-
-  // ── Create order + decrement stock in a transaction ──────────────────────
   const order = await prisma.$transaction(async (tx) => {
     const created = await tx.order.create({
       data: {
@@ -135,6 +230,7 @@ export async function createOrder(
         customerName: d.name,
         customerEmail: d.email,
         customerPhone: d.phone || null,
+        customerCpf: d.cpf || null,
         shippingAddress,
         notes: d.notes || null,
         userProfileId: userProfile.id,
@@ -163,37 +259,51 @@ export async function createOrder(
   revalidatePath("/cart");
   revalidatePath("/", "layout");
 
-  // ── Enviar notificações por email (não bloqueia o fluxo se falhar) ────────
-  try {
-    const settings = await prisma.siteSettings.findUnique({
-      where: { id: "default" },
-      select: { notificationEmail: true },
-    });
-    const orderSummary = {
-      id: order.id,
-      customerName: order.customerName,
-      customerEmail: order.customerEmail,
-      price: total,
-      paymentMethod,
-      itemCount: cart.items.length,
-    };
-    const emailPromises: Promise<void>[] = [
-      sendOrderConfirmationToCustomer(orderSummary),
-    ];
-    if (settings?.notificationEmail) {
-      emailPromises.push(sendNewOrderNotification(orderSummary, settings.notificationEmail));
-    }
-    await Promise.allSettled(emailPromises);
-  } catch {
-    // Falha no email não deve bloquear o pedido
-  }
+  return await processPayment({
+    order,
+    paymentMethod,
+    formData,
+    d,
+    total,
+    items: cart.items.map((item) => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      price: Number(item.product.price),
+    })),
+  });
+}
 
-  // ── WhatsApp flow (sem pagamento online) ─────────────────────────────────
+// ─── processPayment ───────────────────────────────────────────────────────────
+
+type OrderRecord = { id: string };
+type ItemRecord = { productId: string; quantity: number; price: number };
+
+async function processPayment({
+  order,
+  paymentMethod,
+  formData,
+  d,
+  total,
+  items,
+}: {
+  order: OrderRecord;
+  paymentMethod: string;
+  formData: FormData;
+  d: { name: string; email: string };
+  total: number;
+  items: ItemRecord[];
+}): Promise<
+  | { success: false; error: string }
+  | { success: true; type: "paid"; orderId: string }
+  | { success: true; type: "pix"; orderId: string; cieloPaymentId: string; pixQrCode: string }
+  | { success: true; type: "whatsapp"; orderId: string }
+> {
+  // ── WhatsApp ──────────────────────────────────────────────────────────────
   if (paymentMethod === "WHATSAPP") {
     return { success: true, type: "whatsapp", orderId: order.id };
   }
 
-  // ── Cielo — Cartão de Crédito ─────────────────────────────────────────────
+  // ── Cielo — Cartão de Crédito ──────────────────────────────────────────────
   if (paymentMethod === "CREDIT_CARD") {
     const cardNumber = (formData.get("cardNumber") as string) ?? "";
     const cardHolder = (formData.get("cardHolder") as string) ?? "";
@@ -204,7 +314,7 @@ export async function createOrder(
     const card: CieloCreditCard = {
       CardNumber: cardNumber,
       Holder: cardHolder,
-      ExpirationDate: cardExpiry, // "MM/YYYY"
+      ExpirationDate: cardExpiry,
       SecurityCode: cardCvv,
       Brand: detectCardBrand(cardNumber),
     };
@@ -219,13 +329,12 @@ export async function createOrder(
         card,
       });
     } catch (err) {
-      // Payment call failed — mark order cancelled
       await prisma.order.update({
         where: { id: order.id },
         data: { status: "CANCELLED" },
       });
       // Restore stock
-      for (const item of cart.items) {
+      for (const item of items) {
         await prisma.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
@@ -238,7 +347,6 @@ export async function createOrder(
     const { Payment } = cieloResp;
 
     if (isPaymentConfirmed(Payment.Status)) {
-      // Payment approved — update order
       await prisma.order.update({
         where: { id: order.id },
         data: { status: "PAID", cieloPaymentId: Payment.PaymentId },
@@ -247,12 +355,11 @@ export async function createOrder(
     }
 
     if (isPaymentDenied(Payment.Status)) {
-      // Denied — cancel order and restore stock
       await prisma.order.update({
         where: { id: order.id },
         data: { status: "CANCELLED", cieloPaymentId: Payment.PaymentId },
       });
-      for (const item of cart.items) {
+      for (const item of items) {
         await prisma.product.update({
           where: { id: item.productId },
           data: { stock: { increment: item.quantity } },
@@ -262,7 +369,6 @@ export async function createOrder(
       return { success: false, error: `Cartão recusado: ${msg}. Verifique os dados ou tente outro cartão.` };
     }
 
-    // Other status (e.g. 0 = NotFinished)
     await prisma.order.update({
       where: { id: order.id },
       data: { cieloPaymentId: Payment.PaymentId },
@@ -293,10 +399,7 @@ export async function createOrder(
 
     await prisma.order.update({
       where: { id: order.id },
-      data: {
-        cieloPaymentId: Payment.PaymentId,
-        pixQrCode,
-      },
+      data: { cieloPaymentId: Payment.PaymentId, pixQrCode },
     });
 
     return {
@@ -308,31 +411,42 @@ export async function createOrder(
     };
   }
 
-  // Fallback
   return { success: true, type: "whatsapp", orderId: order.id };
 }
 
 // ─── getOrder ─────────────────────────────────────────────────────────────────
 
-/** Busca um pedido pelo ID (do usuário autenticado) */
+/** Busca pedido pelo ID — suporta usuários autenticados e guests */
 export async function getOrder(orderId: string) {
   const { userId } = await getServerAuth();
-  if (!userId) return null;
 
-  const userProfile = await prisma.userProfile.findUnique({
-    where: { clerkId: userId },
-    select: { id: true },
-  });
-  if (!userProfile) return null;
-
-  return prisma.order.findUnique({
-    where: { id: orderId, userProfileId: userProfile.id },
-    include: {
-      items: {
-        include: {
-          product: { select: { name: true, images: true, slug: true } },
-        },
+  const include = {
+    items: {
+      include: {
+        product: { select: { name: true, images: true, slug: true } },
       },
     },
+  };
+
+  if (userId) {
+    const userProfile = await prisma.userProfile.findUnique({
+      where: { clerkId: userId },
+      select: { id: true },
+    });
+
+    if (userProfile) {
+      const order = await prisma.order.findUnique({
+        where: { id: orderId, userProfileId: userProfile.id },
+        include,
+      });
+      if (order) return order;
+    }
+  }
+
+  // Guest order (userProfileId is null — anyone with the order ID can view it)
+  return prisma.order.findFirst({
+    where: { id: orderId, userProfileId: null },
+    include,
   });
 }
+

@@ -175,7 +175,7 @@ export default async function AdminDashboard() {
                       className="px-6 py-4 text-sm"
                       style={{ color: "#C8BBA8" }}
                     >
-                      {order.userProfile.email}
+                      {order.userProfile?.email ?? order.customerEmail ?? "Guest"}
                     </td>
                     <td
                       className="px-6 py-4 text-sm"

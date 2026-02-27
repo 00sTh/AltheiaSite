@@ -36,6 +36,19 @@ export function addToGuestCart(productId: string, quantity = 1): void {
   setGuestCart(items);
 }
 
+export function updateGuestCartItem(productId: string, quantity: number): void {
+  const items = getGuestCart();
+  if (quantity <= 0) {
+    setGuestCart(items.filter((i) => i.productId !== productId));
+  } else {
+    setGuestCart(items.map((i) => (i.productId === productId ? { ...i, quantity } : i)));
+  }
+}
+
+export function removeGuestCartItem(productId: string): void {
+  setGuestCart(getGuestCart().filter((i) => i.productId !== productId));
+}
+
 export function clearGuestCart(): void {
   localStorage.removeItem(GUEST_CART_KEY);
 }

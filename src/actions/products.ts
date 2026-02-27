@@ -75,6 +75,15 @@ export async function getProductBySlug(
   return product as ProductWithCategory | null;
 }
 
+/** Busca produtos por lista de IDs (usado pelo carrinho guest) */
+export async function getProductsByIds(ids: string[]) {
+  if (ids.length === 0) return [];
+  return prisma.product.findMany({
+    where: { id: { in: ids }, active: true },
+    select: { id: true, name: true, price: true, images: true, stock: true, slug: true },
+  });
+}
+
 /** Retorna todas as categorias */
 export async function getCategories() {
   return prisma.category.findMany({

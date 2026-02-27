@@ -127,10 +127,11 @@ export default async function AdminOrderPage({ params }: Props) {
             </h2>
             <div className="space-y-2 text-sm" style={{ color: "#C8BBA8" }}>
               <p>
-                {order.userProfile.firstName} {order.userProfile.lastName}
+                {order.userProfile?.firstName ?? order.customerName ?? "—"}{" "}
+                {order.userProfile?.lastName ?? ""}
               </p>
               <p className="text-xs" style={{ color: "rgba(200,187,168,0.6)" }}>
-                {order.userProfile.email}
+                {order.userProfile?.email ?? order.customerEmail ?? "Guest"}
               </p>
             </div>
           </div>

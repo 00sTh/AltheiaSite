@@ -1,18 +1,21 @@
-import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { Lock, ShieldCheck } from "lucide-react";
 import { CheckoutForm } from "@/components/checkout/checkout-form";
 import { getCart } from "@/actions/cart";
+import { getServerAuth } from "@/lib/auth";
 
 export const metadata: Metadata = {
   title: "Finalizar compra",
 };
 
 export default async function CheckoutPage() {
-  const cart = await getCart();
+  const { userId } = await getServerAuth();
 
-  if (!cart || cart.items.length === 0) {
-    redirect("/cart");
+  // Auth users: load DB cart
+  let cart = null;
+  if (userId) {
+    cart = await getCart();
+    // If auth user has empty cart, show form anyway (guest items may exist via GuestCartSync)
   }
 
   return (
@@ -50,11 +53,7 @@ export default async function CheckoutPage() {
             border: "1px solid rgba(201,162,39,0.1)",
           }}
         >
-          {[
-            "SSL Criptografado",
-            "Pagamento Seguro",
-            "Dados Protegidos",
-          ].map((badge) => (
+          {["SSL Criptografado", "Pagamento Seguro", "Dados Protegidos"].map((badge) => (
             <div key={badge} className="flex items-center gap-1.5">
               <ShieldCheck className="h-3.5 w-3.5 shrink-0" style={{ color: "#C9A227" }} />
               <span className="text-xs hidden sm:inline" style={{ color: "#C8BBA8" }}>
@@ -64,14 +63,12 @@ export default async function CheckoutPage() {
           ))}
         </div>
 
-        {/* Checkout form wrapper */}
+        {/* Checkout form */}
         <div
           className="rounded-3xl overflow-hidden"
-          style={{
-            border: "1px dashed rgba(201,162,39,0.25)",
-          }}
+          style={{ border: "1px dashed rgba(201,162,39,0.25)" }}
         >
-          <CheckoutForm cart={cart} />
+          <CheckoutForm cart={cart} isGuest={!userId} />
         </div>
       </div>
     </div>

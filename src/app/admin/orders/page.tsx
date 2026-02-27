@@ -116,10 +116,12 @@ export default async function AdminOrdersPage({ searchParams }: Props) {
                     </td>
                     <td className="px-5 py-4" style={{ color: "#C8BBA8" }}>
                       <div>
-                        <p className="text-sm">{order.userProfile.email}</p>
-                        {order.userProfile.firstName && (
+                        <p className="text-sm">
+                          {order.userProfile?.email ?? order.customerEmail ?? "Guest"}
+                        </p>
+                        {(order.userProfile?.firstName ?? order.customerName) && (
                           <p className="text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
-                            {order.userProfile.firstName}
+                            {order.userProfile?.firstName ?? order.customerName}
                           </p>
                         )}
                       </div>
