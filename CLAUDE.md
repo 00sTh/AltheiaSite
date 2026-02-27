@@ -1,10 +1,10 @@
-# CLAUDE.md — AltheiaSite v0.7.0
+# CLAUDE.md — AltheiaSite v0.8.0
 
 > **REGRA:** Sempre atualizar este arquivo após qualquer mudança significativa de arquitetura, features ou convenções.
 
 ## Visão Geral
 E-commerce de cosméticos para a empresa Althéia. Plataforma de luxo com tema Emerald + Gold.
-Versão atual: **0.7.0** (main — pronto para deploy produção).
+Versão atual: **0.8.0** (main — pronto para deploy produção).
 
 ## Stack
 | Tecnologia | Versão | Propósito |
@@ -37,43 +37,32 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 
 ## Banco de Dados
 
-### Dev (SQLite)
-- `prisma/schema.prisma` — `provider = "sqlite"`
-- `DATABASE_URL=file:./prisma/demo.db`
-- Enums como String, sem `@db.Decimal`
-
 ### Produção (PostgreSQL — Neon)
-- `prisma/schema.production.prisma` — enums nativos, `Decimal`, `String[]`, `Json`
+- `prisma/schema.production.prisma` e `prisma/schema.prisma` são iguais (PostgreSQL)
 - `DATABASE_URL` — URL pooled (pgbouncer)
 - `DIRECT_URL` — URL direta para migrations
 - `npm run build:prod` copia schema.production.prisma → schema.prisma antes do build
+- Para regenerar tipos localmente: `DIRECT_URL="pg://x" DATABASE_URL="pg://x" npx prisma generate`
 
 ### Modelos principais
-- `SiteUser` — auth próprio DEMO_MODE (username, email, passwordHash, role, emailVerified)
 - `UserProfile` — extensão Clerk (clerkId único)
 - `Category` — hierárquica via parentId (name, slug, imageUrl)
 - `Product` — UUID, slug, price Decimal, images String[], featured, active, stock, ingredients, usage
 - `Cart` + `CartItem` — um por clerkId, persistido no banco; unique (cartId, productId)
 - `Order` + `OrderItem` — enum OrderStatus (PENDING/PAID/SHIPPED/DELIVERED/CANCELLED), enum PaymentMethod (WHATSAPP/CREDIT_CARD/PIX)
 - `OrderItem.price` — snapshot do preço no momento da compra
-- `SiteSettings` — singleton id="default", ~50 campos (hero, lumina, about, social, SEO, logo, newsletter, benefícios)
+- `SiteSettings` — singleton id="default", ~53 campos (hero, lumina, about, social, SEO, logo, newsletter, benefícios, notificationEmail, cepOrigem, pesoMedioProduto)
 - `MediaAsset` — banco de mídia (name, url, type IMAGE|VIDEO, size)
 - `Wishlist` + `WishlistItem` — por clerkId, unique (wishlistId, productId)
 - `NewsletterSubscriber` — email único, confirmedAt
 
-## Auth (Dual Mode)
-
-### Produção (`DEMO_MODE=false`)
+## Auth (Clerk apenas — v0.8.0)
+- DEMO_MODE e SiteUser REMOVIDOS
 - `middleware.ts` — `clerkMiddleware` + `createRouteMatcher`
 - Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/api/webhooks/**`, `/loja/**`
 - Rotas admin (`/admin/**`): exige `sessionClaims.metadata.role === "admin"`
 - Rotas protegidas (`/account`, `/cart`, `/checkout`): exige userId
 - **Não usar** `return false` — usar `redirectToSignIn()`
-
-### Demo (`DEMO_MODE=true`)
-- `SiteUser` + session cookies (DemoAuthProvider em `src/context/auth.tsx`)
-- `src/lib/auth.ts` — `getServerAuth()` abstrai os dois modos
-- Login via `/admin/login`
 
 ## Carrinho (Server Actions)
 - `src/actions/cart.ts` — `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`, `getCart`
@@ -114,19 +103,18 @@ src/
     account/page.tsx                 — Conta + pedidos
     admin/                           — Painel admin (role=admin)
       page.tsx                       — Dashboard métricas
-      login/page.tsx                 — Login DEMO_MODE
       products/                      — CRUD produtos
       categories/                    — CRUD categorias (hierárquico)
       media/page.tsx                 — Banco de mídia
       orders/                        — Listagem + detalhe + status
-      users/                         — CRUD usuários
       settings/page.tsx              — SiteSettings
       newsletter/page.tsx            — Inscritos
     api/
       newsletter/route.ts
       webhooks/cielo/route.ts
-      check-payment/route.ts
-    layout.tsx                       — Root layout (fontes, metadata, providers)
+      check-payment/route.ts         — polling PIX + expiração automática 1h
+      frete/route.ts                 — cálculo PAC/SEDEX via Correios
+    layout.tsx                       — Root layout (fontes, metadata, favicon, ClerkProvider)
     globals.css                      — Tema Emerald+Gold + @theme inline
     not-found.tsx                    — 404 luxury (gold + framer particles)
     sitemap.ts                       — SEO dinâmico
@@ -134,25 +122,23 @@ src/
   actions/
     cart.ts
     products.ts
-    orders.ts
-    admin.ts                         — Todos os mutations admin (products, categories, media, users, orders, settings, newsletter)
+    orders.ts                        — envia emails após criar pedido
+    admin.ts                         — mutations admin (products, categories, media, orders, settings, newsletter)
     wishlist.ts
-    admin-auth.ts                    — Login DEMO_MODE
-    users.ts
-    site-users.ts                    — CRUD SiteUser
+    users.ts                         — Clerk role management (sem DEMO_MODE)
   components/
     ui/                              — shadcn/ui + gold-button (CVA) + section-title + product-image
-    layout/                          — navbar.tsx (server) + navbar-client.tsx (client) + footer + mobile-nav + newsletter-form + logout-button
+    layout/                          — navbar.tsx (server) + navbar-client.tsx (client) + footer + mobile-nav + newsletter-form
     home/                            — hero-section + best-sellers + category-cards + lumina-highlight + nossa-historia-teaser + why-altheia
     products/                        — product-card + product-filters + product-accordion + wishlist-button
-    cart/                            — add-to-cart-button + cart-item
-    checkout/                        — checkout-form + pix-polling
+    cart/                            — add-to-cart-button + cart-item + shipping-calculator
+    checkout/                        — checkout-form + pix-polling (com status expired)
     about/                           — SobreNosContent (client)
     videos/                          — VideosContent (client)
-    admin/                           — admin-login-form + forms CRUD
+    admin/                           — forms CRUD (sem admin-login-form)
   lib/
     prisma.ts                        — Singleton Prisma
-    auth.ts                          — getServerAuth() (Clerk ou DEMO_MODE)
+    auth.ts                          — getServerAuth() (Clerk apenas)
     cielo.ts                         — Integração Cielo
     blob.ts                          — Upload local public/uploads/ (Vercel Blob comentado)
     animations.ts                    — framer-motion variants
@@ -166,12 +152,18 @@ src/
   types/
     index.ts                         — ProductWithCategory, etc.
   context/
-    auth.tsx                         — DemoAuthProvider + ClerkAuthBridge
+    auth.tsx                         — ClerkAuthBridge (DemoAuthProvider removido)
   hooks/
     use-guest-cart.ts
+  lib/
+    correios.ts                      — calcularFrete() via API pública Correios
+    mailer.ts                        — sendMail + sendNewOrderNotification + sendOrderConfirmationToCustomer
+tests/
+  smoke.spec.ts                      — Playwright smoke tests
+playwright.config.ts
 prisma/
-  schema.prisma                      — Dev (SQLite)
-  schema.production.prisma           — Prod (PostgreSQL)
+  schema.prisma                      — PostgreSQL (= schema.production.prisma)
+  schema.production.prisma           — Prod (PostgreSQL) — source of truth
   seed.ts
 middleware.ts                        — Auth + security headers
 ```
@@ -185,6 +177,9 @@ middleware.ts                        — Auth + security headers
 - `instagramUrl/youtubeUrl/twitterUrl`
 - `newsletterTitle/Subtitle`
 - `metaTitle/Description/shippingFreeThreshold`
+- `notificationEmail` — email notificações de pedidos
+- `cepOrigem` — CEP da loja p/ cálculo frete
+- `pesoMedioProduto` — peso médio por produto em gramas
 - Campos de benefícios (ícones, textos do WhyAltheia)
 - Editar em `/admin/settings`
 
@@ -196,6 +191,7 @@ middleware.ts                        — Auth + security headers
 - Prisma objects têm symbol properties — NÃO passar diretamente para "use client" components
 - Server Components NÃO podem ter event handlers
 - Todas as Server Actions: Zod validation + `getServerAuth()` + `revalidatePath()` + retornam `ActionResult<T>`
+- Checkbox em Zod: **`v === "on"`** (não `v !== "off"`)
 
 ## Bugs corrigidos (não regredir)
 - Admin middleware: verificar `sessionClaims.metadata.role === "admin"`, não `return false`
@@ -203,6 +199,7 @@ middleware.ts                        — Auth + security headers
 - images String[]: PostgreSQL suporta nativo — sem JSON.stringify/parse
 - P2002 (unique constraint): tratar nos actions com try/catch específico
 - Security headers: CSP sem Stripe (removido), incluir domínios Cielo se necessário
+- Produto toggle active: Zod usa `v === "on"` — checkbox não envia campo quando desmarcado
 
 ## Comandos úteis
 ```bash
@@ -227,28 +224,37 @@ source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run build:prod
 
 ## Deploy (Vercel + Neon)
 - Vercel DNS: A record `76.76.21.21` (raiz) + CNAME `cname.vercel-dns.com` (www)
-- Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `DEMO_MODE`
-- `npm run build:prod` copia schema.production.prisma antes do build
-
-## Bugs corrigidos pós-deploy (não regredir)
-- `layout.tsx`: em produção (DEMO_MODE=false) DEVE ter `<ClerkProvider><ClerkAuthBridge>{children}</ClerkAuthBridge></ClerkProvider>`
-- `context/auth.tsx`: `ClerkAuthBridge` usa import estático `import { useUser } from "@clerk/nextjs"` — NUNCA usar `require()` dinâmico (quebra prerender)
-- `navbar-client.tsx`: logout usa `<SignOutButton>` do Clerk em produção, `<LogoutButton>` apenas em DEMO_MODE
-- `pix-polling.tsx`: QR code gerado por `react-qr-code` (SVG local) — Google Charts API foi removida por ser descontinuada
-- Clerk `sessionClaims.metadata`: requer configurar JWT template no dashboard → Configure → Sessions → `{ "metadata": "{{user.public_metadata}}" }`
-- Role admin: setar `{ "role": "admin" }` em Public metadata do usuário no Clerk dashboard
-
-## Deploy (Vercel + Neon)
-- Vercel DNS: A record `76.76.21.21` (raiz) + CNAME `cname.vercel-dns.com` (www)
 - Desativar Vercel Deployment Protection: Settings → Deployment Protection → None
-- Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `DEMO_MODE`
+- Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`
+- Email: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (para notificações)
+- `DEMO_MODE` REMOVIDO — não adicionar no Vercel
 - `DATABASE_URL` (pooled): `...?sslmode=require&pgbouncer=true&connect_timeout=15`
 - `DIRECT_URL` (direta): `...?sslmode=require` (sem pgbouncer, sem channel_binding)
 - `npm run build:prod` copia schema.production.prisma antes do build
 - Tabelas criadas com `npx prisma db push` usando DIRECT_URL do Neon
+- Após schema changes: rodar `prisma db push` em produção para aplicar novos campos
+
+## Bugs corrigidos pós-deploy (não regredir)
+- `layout.tsx`: SEMPRE `<ClerkProvider><ClerkAuthBridge>{children}</ClerkAuthBridge></ClerkProvider>`
+- `context/auth.tsx`: `ClerkAuthBridge` usa import estático `import { useUser } from "@clerk/nextjs"` — NUNCA usar `require()` dinâmico
+- `navbar-client.tsx`: logout usa apenas `<SignOutButton>` do Clerk
+- `pix-polling.tsx`: QR code gerado por `react-qr-code` (SVG local)
+- Clerk `sessionClaims.metadata`: requer JWT template no dashboard → Configure → Sessions → `{ "metadata": "{{user.public_metadata}}" }`
+- Role admin: setar `{ "role": "admin" }` em Public metadata do usuário no Clerk dashboard
+
+## Testes (Playwright)
+```bash
+# Instalar browser (uma vez)
+npm run test:install
+# Rodar smoke tests (servidor em execução em localhost:3000)
+npm run test:e2e
+# Com UI
+npm run test:e2e:ui
+```
 
 ## Branches
-- `main` — produção (v0.7.0+)
+- `main` — produção (v0.8.0)
+- `Altheia-0.8.0` — estado v0.7.0 antes das correções v0.8.0
 - `Altheia-0.7.0` — gateway Cielo + account redesign
 - `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
 - `Altheia-0.5.0` — admin completo + banco de mídia + lumina dinâmica + logo nav
