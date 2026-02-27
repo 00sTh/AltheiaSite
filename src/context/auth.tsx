@@ -10,6 +10,7 @@
  */
 
 import { createContext, useContext, type ReactNode } from "react";
+import { useUser } from "@clerk/nextjs";
 
 interface AuthContextValue {
   isLoaded: boolean;
@@ -54,17 +55,6 @@ export function DemoAuthProvider({
  * Usar quando DEMO_MODE=false.
  */
 export function ClerkAuthBridge({ children }: { children: ReactNode }) {
-  // Importação dinâmica para não quebrar em demo mode
-  // Este componente só é renderizado quando há ClerkProvider no tree
-  const { useUser } = require("@clerk/nextjs") as {
-    useUser: () => {
-      isLoaded: boolean;
-      isSignedIn: boolean | undefined;
-      user: { id: string; firstName: string | null } | null | undefined;
-    };
-  };
-
-  // eslint-disable-next-line react-hooks/rules-of-hooks
   const { isLoaded, isSignedIn, user } = useUser();
 
   return (
