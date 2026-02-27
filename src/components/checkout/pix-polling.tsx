@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle, Clock, Copy, Check, RefreshCw } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
+import QRCode from "react-qr-code";
 
 interface Props {
   orderId: string;
@@ -19,8 +20,6 @@ export function PixPolling({ orderId, paymentId, pixQrCode }: Props) {
   const [copied, setCopied] = useState(false);
   const [elapsed, setElapsed] = useState(0);
 
-  // QR code image via Google Charts (free, no library needed)
-  const qrImageUrl = `https://chart.googleapis.com/chart?chs=250x250&cht=qr&chl=${encodeURIComponent(pixQrCode)}&choe=UTF-8`;
 
   const checkStatus = useCallback(async () => {
     try {
@@ -105,14 +104,12 @@ export function PixPolling({ orderId, paymentId, pixQrCode }: Props) {
           border: "1px solid rgba(201,162,39,0.2)",
         }}
       >
-        <div className="inline-block p-3 rounded-xl bg-white mb-4">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={qrImageUrl}
-            alt="QR Code PIX"
-            width={200}
-            height={200}
-            className="block"
+        <div className="inline-block p-4 rounded-xl bg-white mb-4">
+          <QRCode
+            value={pixQrCode}
+            size={200}
+            bgColor="#ffffff"
+            fgColor="#000000"
           />
         </div>
 
