@@ -230,8 +230,25 @@ source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run build:prod
 - Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `DEMO_MODE`
 - `npm run build:prod` copia schema.production.prisma antes do build
 
+## Bugs corrigidos pós-deploy (não regredir)
+- `layout.tsx`: em produção (DEMO_MODE=false) DEVE ter `<ClerkProvider><ClerkAuthBridge>{children}</ClerkAuthBridge></ClerkProvider>`
+- `context/auth.tsx`: `ClerkAuthBridge` usa import estático `import { useUser } from "@clerk/nextjs"` — NUNCA usar `require()` dinâmico (quebra prerender)
+- `navbar-client.tsx`: logout usa `<SignOutButton>` do Clerk em produção, `<LogoutButton>` apenas em DEMO_MODE
+- `pix-polling.tsx`: QR code gerado por `react-qr-code` (SVG local) — Google Charts API foi removida por ser descontinuada
+- Clerk `sessionClaims.metadata`: requer configurar JWT template no dashboard → Configure → Sessions → `{ "metadata": "{{user.public_metadata}}" }`
+- Role admin: setar `{ "role": "admin" }` em Public metadata do usuário no Clerk dashboard
+
+## Deploy (Vercel + Neon)
+- Vercel DNS: A record `76.76.21.21` (raiz) + CNAME `cname.vercel-dns.com` (www)
+- Desativar Vercel Deployment Protection: Settings → Deployment Protection → None
+- Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `DEMO_MODE`
+- `DATABASE_URL` (pooled): `...?sslmode=require&pgbouncer=true&connect_timeout=15`
+- `DIRECT_URL` (direta): `...?sslmode=require` (sem pgbouncer, sem channel_binding)
+- `npm run build:prod` copia schema.production.prisma antes do build
+- Tabelas criadas com `npx prisma db push` usando DIRECT_URL do Neon
+
 ## Branches
-- `main` — produção (v0.7.0)
+- `main` — produção (v0.7.0+)
 - `Altheia-0.7.0` — gateway Cielo + account redesign
 - `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
 - `Altheia-0.5.0` — admin completo + banco de mídia + lumina dinâmica + logo nav
