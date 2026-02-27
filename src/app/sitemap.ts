@@ -3,14 +3,21 @@ import { prisma } from "@/lib/prisma";
 import { APP_URL } from "@/lib/constants";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const products = await prisma.product.findMany({
-    where: { active: true },
-    select: { slug: true, updatedAt: true },
-  });
-
-  const categories = await prisma.category.findMany({
-    select: { slug: true },
-  });
+  let products: { slug: string; updatedAt: Date }[] = [];
+  let categories: { slug: string }[] = [];
+  try {
+    [products, categories] = await Promise.all([
+      prisma.product.findMany({
+        where: { active: true },
+        select: { slug: true, updatedAt: true },
+      }),
+      prisma.category.findMany({
+        select: { slug: true },
+      }),
+    ]);
+  } catch {
+    // DB unavailable during build — return only static pages
+  }
 
   const staticPages: MetadataRoute.Sitemap = [
     {

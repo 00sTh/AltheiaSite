@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
-import { DemoAuthProvider } from "@/context/auth";
+import { ClerkProvider } from "@clerk/nextjs";
+import { DemoAuthProvider, ClerkAuthBridge } from "@/context/auth";
 import "./globals.css";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
@@ -69,7 +70,9 @@ export default async function RootLayout({
         {isDemoMode ? (
           <DemoAuthProvider initialAuth={demoAuth}>{children}</DemoAuthProvider>
         ) : (
-          children
+          <ClerkProvider>
+            <ClerkAuthBridge>{children}</ClerkAuthBridge>
+          </ClerkProvider>
         )}
       </body>
     </html>

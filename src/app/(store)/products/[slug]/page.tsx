@@ -20,8 +20,12 @@ interface ProductPageProps {
 }
 
 export async function generateStaticParams() {
-  const { products } = await getProducts({ featured: true });
-  return products.map((p) => ({ slug: p.slug }));
+  try {
+    const { products } = await getProducts({ featured: true });
+    return products.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export async function generateMetadata({

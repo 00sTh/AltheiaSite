@@ -1,51 +1,95 @@
-# CLAUDE.md — AltheiaSite
+# CLAUDE.md — AltheiaSite v0.7.0
+
+> **REGRA:** Sempre atualizar este arquivo após qualquer mudança significativa de arquitetura, features ou convenções.
 
 ## Visão Geral
-E-commerce de cosméticos para a empresa Altheia.
-Gerado em 2026-02-26 como boilerplate de produção.
+E-commerce de cosméticos para a empresa Althéia. Plataforma de luxo com tema Emerald + Gold.
+Versão atual: **0.7.0** (main — pronto para deploy produção).
 
 ## Stack
 | Tecnologia | Versão | Propósito |
 |---|---|---|
 | Next.js | ^16 | Framework (App Router + Server Components) |
 | TypeScript | strict | Linguagem |
-| Tailwind CSS | v4 | Estilo |
-| shadcn/ui + Radix | latest | Componentes |
+| Tailwind CSS | v4 | Estilo (`@theme inline` no globals.css) |
+| shadcn/ui + Radix | latest | Componentes base |
 | Prisma | ^6 | ORM |
-| PostgreSQL (Neon) | — | Banco de dados |
-| Clerk | ^6 | Autenticação completa |
-| Stripe | ^17 | Pagamentos |
+| PostgreSQL (Neon) | — | Banco prod / SQLite dev |
+| Clerk | ^6 | Autenticação produção |
+| Cielo | — | Gateway de pagamento (cartão + PIX) |
+| framer-motion | ^12 | Animações |
 | Zod | ^3 | Validação |
+| nodemailer | ^8 | E-mail |
+
+> **Stripe foi removido** — gateway é Cielo. Stripe package pode estar instalado mas não é usado.
 
 ## Node
 Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 
-## Banco de Dados (PostgreSQL)
-- `DATABASE_URL` — URL pooled (Neon pgbouncer) para queries normais
-- `DIRECT_URL` — URL direta para migrations do Prisma
-- Suporta enums nativos, Decimal, String[], Json (diferente do projeto relógios que usava SQLite)
+## Tema Visual (Emerald + Gold)
+- **Fundo:** `#0A3D2F` (emerald-deep)
+- **Accent:** `#C9A227` (gold)
+- **Texto:** `#F5F0E6` (cream)
+- **Tipografia:** Playfair Display (headings serif) + Geist Sans (body)
+- **Animações:** framer-motion variants em `src/lib/animations.ts`
+- CSS utilities: `.gold-glow`, `.text-gradient-gold`, `.label-luxury`, `.border-gold-subtle`
+- `@keyframes float`, `shimmer`, `fadeInUp`
+
+## Banco de Dados
+
+### Dev (SQLite)
+- `prisma/schema.prisma` — `provider = "sqlite"`
+- `DATABASE_URL=file:./prisma/demo.db`
+- Enums como String, sem `@db.Decimal`
+
+### Produção (PostgreSQL — Neon)
+- `prisma/schema.production.prisma` — enums nativos, `Decimal`, `String[]`, `Json`
+- `DATABASE_URL` — URL pooled (pgbouncer)
+- `DIRECT_URL` — URL direta para migrations
+- `npm run build:prod` copia schema.production.prisma → schema.prisma antes do build
 
 ### Modelos principais
-- `UserProfile` — extensão do Clerk (clerkId único)
-- `Category` — suporte a hierarquia via parentId
-- `Product` — UUID, slug, price Decimal, images String[], featured, active
-- `Cart` + `CartItem` — um por clerkId, persistido no banco
-- `Order` + `OrderItem` — enum OrderStatus (PENDING/PAID/SHIPPED/DELIVERED/CANCELLED)
+- `SiteUser` — auth próprio DEMO_MODE (username, email, passwordHash, role, emailVerified)
+- `UserProfile` — extensão Clerk (clerkId único)
+- `Category` — hierárquica via parentId (name, slug, imageUrl)
+- `Product` — UUID, slug, price Decimal, images String[], featured, active, stock, ingredients, usage
+- `Cart` + `CartItem` — um por clerkId, persistido no banco; unique (cartId, productId)
+- `Order` + `OrderItem` — enum OrderStatus (PENDING/PAID/SHIPPED/DELIVERED/CANCELLED), enum PaymentMethod (WHATSAPP/CREDIT_CARD/PIX)
 - `OrderItem.price` — snapshot do preço no momento da compra
+- `SiteSettings` — singleton id="default", ~50 campos (hero, lumina, about, social, SEO, logo, newsletter, benefícios)
+- `MediaAsset` — banco de mídia (name, url, type IMAGE|VIDEO, size)
+- `Wishlist` + `WishlistItem` — por clerkId, unique (wishlistId, productId)
+- `NewsletterSubscriber` — email único, confirmedAt
 
-## Auth (Clerk)
-- `middleware.ts` — usa `clerkMiddleware` + `createRouteMatcher`
-- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/api/webhooks/**`
+## Auth (Dual Mode)
+
+### Produção (`DEMO_MODE=false`)
+- `middleware.ts` — `clerkMiddleware` + `createRouteMatcher`
+- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/api/webhooks/**`, `/loja/**`
 - Rotas admin (`/admin/**`): exige `sessionClaims.metadata.role === "admin"`
 - Rotas protegidas (`/account`, `/cart`, `/checkout`): exige userId
 - **Não usar** `return false` — usar `redirectToSignIn()`
 
+### Demo (`DEMO_MODE=true`)
+- `SiteUser` + session cookies (DemoAuthProvider em `src/context/auth.tsx`)
+- `src/lib/auth.ts` — `getServerAuth()` abstrai os dois modos
+- Login via `/admin/login`
+
 ## Carrinho (Server Actions)
 - `src/actions/cart.ts` — `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`, `getCart`
 - Persistência 100% no banco (tabelas `Cart` / `CartItem`)
-- Validação com Zod antes de qualquer operação no banco
-- Verifica estoque antes de adicionar
+- Valida estoque antes de adicionar
+- Zod antes de qualquer operação no banco
 - `revalidatePath("/cart")` + `revalidatePath("/", "layout")` após mutações
+- `src/hooks/use-guest-cart.ts` — sync carrinho guest → DB no login
+
+## Pagamentos (Cielo)
+- Gateway: **Cielo** (cartão de crédito + PIX)
+- `src/lib/cielo.ts` — integração Cielo
+- Webhook: `/api/webhooks/cielo/route.ts`
+- PIX polling: `/checkout/pix` + `src/components/checkout/pix-polling.tsx`
+- WhatsApp: flow manual `/checkout` → redirect WhatsApp
+- `/api/check-payment` — verifica status do pagamento
 
 ## Estrutura de diretórios
 ```
@@ -53,45 +97,112 @@ src/
   app/
     (auth)/sign-in/[[...sign-in]]/   — Clerk SignIn
     (auth)/sign-up/[[...sign-up]]/   — Clerk SignUp
-    (store)/                         — Layout com Navbar + Footer
-      page.tsx                       — Home (featured products + categorias)
+    (store)/                         — Layout Navbar + Footer
+      page.tsx                       — Home
       products/page.tsx              — Listagem com filtros
       products/[slug]/page.tsx       — Detalhe + AddToCart
       cart/page.tsx                  — Carrinho
-      checkout/page.tsx              — Checkout
-    account/page.tsx                 — Conta + últimos pedidos
-    admin/page.tsx                   — Dashboard admin
-    api/webhooks/stripe/route.ts     — Webhook Stripe
+      checkout/page.tsx              — Checkout (Cielo/PIX/WhatsApp)
+      checkout/pix/page.tsx          — PIX polling
+      checkout/sucesso/page.tsx      — Confirmação
+      sobre-nos/page.tsx
+      videos/page.tsx
+      wishlist/page.tsx
+      loja/page.tsx
+      politica-de-privacidade/page.tsx
+      termos-de-uso/page.tsx
+    account/page.tsx                 — Conta + pedidos
+    admin/                           — Painel admin (role=admin)
+      page.tsx                       — Dashboard métricas
+      login/page.tsx                 — Login DEMO_MODE
+      products/                      — CRUD produtos
+      categories/                    — CRUD categorias (hierárquico)
+      media/page.tsx                 — Banco de mídia
+      orders/                        — Listagem + detalhe + status
+      users/                         — CRUD usuários
+      settings/page.tsx              — SiteSettings
+      newsletter/page.tsx            — Inscritos
+    api/
+      newsletter/route.ts
+      webhooks/cielo/route.ts
+      check-payment/route.ts
+    layout.tsx                       — Root layout (fontes, metadata, providers)
+    globals.css                      — Tema Emerald+Gold + @theme inline
+    not-found.tsx                    — 404 luxury (gold + framer particles)
+    sitemap.ts                       — SEO dinâmico
+    robots.ts
   actions/
-    cart.ts                          — Server Actions do carrinho
-    products.ts                      — Queries de produtos/categorias
+    cart.ts
+    products.ts
+    orders.ts
+    admin.ts                         — Todos os mutations admin (products, categories, media, users, orders, settings, newsletter)
+    wishlist.ts
+    admin-auth.ts                    — Login DEMO_MODE
+    users.ts
+    site-users.ts                    — CRUD SiteUser
   components/
-    ui/                              — shadcn/ui (button, card, badge, input)
-    layout/                          — Navbar, Footer, ThemeToggle
-    products/                        — ProductCard, ProductFilters
-    cart/                            — AddToCartButton, CartItemCard
-    checkout/                        — CheckoutForm (placeholder Stripe)
+    ui/                              — shadcn/ui + gold-button (CVA) + section-title + product-image
+    layout/                          — navbar.tsx (server) + navbar-client.tsx (client) + footer + mobile-nav + newsletter-form + logout-button
+    home/                            — hero-section + best-sellers + category-cards + lumina-highlight + nossa-historia-teaser + why-altheia
+    products/                        — product-card + product-filters + product-accordion + wishlist-button
+    cart/                            — add-to-cart-button + cart-item
+    checkout/                        — checkout-form + pix-polling
+    about/                           — SobreNosContent (client)
+    videos/                          — VideosContent (client)
+    admin/                           — admin-login-form + forms CRUD
   lib/
     prisma.ts                        — Singleton Prisma
-    stripe.ts                        — Singleton Stripe + helpers
-    utils.ts                         — cn(), formatPrice(), truncate()
+    auth.ts                          — getServerAuth() (Clerk ou DEMO_MODE)
+    cielo.ts                         — Integração Cielo
+    blob.ts                          — Upload local public/uploads/ (Vercel Blob comentado)
+    animations.ts                    — framer-motion variants
+    utils.ts                         — cn(), formatPrice(), truncate(), parseImages()
     constants.ts                     — APP_NAME, ORDER_STATUS_LABEL, etc.
+    mailer.ts                        — nodemailer
+    session.ts                       — DEMO_MODE session management
   schemas/
-    cart.schema.ts                   — Zod schemas do carrinho
-    checkout.schema.ts               — Zod schema do checkout
+    cart.schema.ts
+    checkout.schema.ts
   types/
-    index.ts                         — Tipos compostos (ProductWithCategory, etc.)
+    index.ts                         — ProductWithCategory, etc.
+  context/
+    auth.tsx                         — DemoAuthProvider + ClerkAuthBridge
+  hooks/
+    use-guest-cart.ts
 prisma/
-  schema.prisma                      — Modelos completos
-  seed.ts                            — 3 categorias + 10 produtos de exemplo
+  schema.prisma                      — Dev (SQLite)
+  schema.production.prisma           — Prod (PostgreSQL)
+  seed.ts
+middleware.ts                        — Auth + security headers
 ```
+
+## SiteSettings (singleton id="default") — campos principais
+- `siteLogoUrl` — logo PNG navbar
+- `heroTitle/Subtitle/ImageUrl/VideoUrl/leftVideoUrl/rightVideoUrl/heroLogoUrl`
+- `lumina*` — LuminaHighlight: label, title, subtitle, imageUrl, badgeText, productLink
+- `aboutTitle/Text/ImageUrl`
+- `featuredVideoUrl/Title/Desc`
+- `instagramUrl/youtubeUrl/twitterUrl`
+- `newsletterTitle/Subtitle`
+- `metaTitle/Description/shippingFreeThreshold`
+- Campos de benefícios (ícones, textos do WhyAltheia)
+- Editar em `/admin/settings`
 
 ## Convenções
 - Server Components por padrão; `"use client"` somente quando necessário
+- Separar server wrapper + client component (ex: navbar.tsx + navbar-client.tsx)
 - Preços: **sempre calculados no servidor** (nunca vindos do client)
 - `formatPrice()` em `src/lib/utils.ts` — usar em vez de Intl direto
-- CSS variables via `@theme inline` no globals.css (padrão Tailwind v4)
-- Cor primária Altheia: `hsl(340, 82%, 52%)` — rosa/coral
+- Prisma objects têm symbol properties — NÃO passar diretamente para "use client" components
+- Server Components NÃO podem ter event handlers
+- Todas as Server Actions: Zod validation + `getServerAuth()` + `revalidatePath()` + retornam `ActionResult<T>`
+
+## Bugs corrigidos (não regredir)
+- Admin middleware: verificar `sessionClaims.metadata.role === "admin"`, não `return false`
+- Prisma hot-reload Turbopack: singleton com `globalThis` em `prisma.ts`
+- images String[]: PostgreSQL suporta nativo — sem JSON.stringify/parse
+- P2002 (unique constraint): tratar nos actions com try/catch específico
+- Security headers: CSP sem Stripe (removido), incluir domínios Cielo se necessário
 
 ## Comandos úteis
 ```bash
@@ -99,23 +210,29 @@ prisma/
 source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npx tsc --noEmit
 
 # Dev
-source /home/sth/.nvm/nvm.sh && npm run dev
+source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run dev
 
-# Migrations
-source /home/sth/.nvm/nvm.sh && npm run db:migrate
+# Migrations dev
+source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run db:push
 
 # Seed
-source /home/sth/.nvm/nvm.sh && npm run db:seed
+source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run db:seed
 
-# Webhook Stripe local
-stripe listen --forward-to localhost:3000/api/webhooks/stripe
+# Build produção
+source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run build:prod
+
+# Webhook Cielo local
+# Configurar via dashboard Cielo apontando para ngrok/tunnel
 ```
 
-## Próximos passos sugeridos
-- [ ] Admin: CRUD de produtos (upload de imagens com Vercel Blob)
-- [ ] Admin: gestão de pedidos (atualizar status)
-- [ ] Checkout: integrar `@stripe/react-stripe-js` com `PaymentElement`
-- [ ] Webhook: decrementar estoque após pagamento confirmado
-- [ ] Webhook: enviar e-mail de confirmação
-- [ ] Busca: implementar pesquisa full-text
-- [ ] Reviews: sistema de avaliações de produtos
+## Deploy (Vercel + Neon)
+- Vercel DNS: A record `76.76.21.21` (raiz) + CNAME `cname.vercel-dns.com` (www)
+- Env vars necessárias: `DATABASE_URL`, `DIRECT_URL`, `CLERK_SECRET_KEY`, `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `NEXT_PUBLIC_SITE_URL`, `DEMO_MODE`
+- `npm run build:prod` copia schema.production.prisma antes do build
+
+## Branches
+- `main` — produção (v0.7.0)
+- `Altheia-0.7.0` — gateway Cielo + account redesign
+- `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
+- `Altheia-0.5.0` — admin completo + banco de mídia + lumina dinâmica + logo nav
+- `feature/luxury-redesign-complete` — redesign Emerald/Gold base
