@@ -1,10 +1,10 @@
-# CLAUDE.md — AltheiaSite v0.8.0
+# CLAUDE.md — AltheiaSite v0.8.1
 
 > **REGRA:** Sempre atualizar este arquivo após qualquer mudança significativa de arquitetura, features ou convenções.
 
 ## Visão Geral
 E-commerce de cosméticos para a empresa Althéia. Plataforma de luxo com tema Emerald + Gold.
-Versão atual: **0.8.0** (main — pronto para deploy produção).
+Versão atual: **0.8.1** (main — produção).
 
 ## Stack
 | Tecnologia | Versão | Propósito |
@@ -14,8 +14,8 @@ Versão atual: **0.8.0** (main — pronto para deploy produção).
 | Tailwind CSS | v4 | Estilo (`@theme inline` no globals.css) |
 | shadcn/ui + Radix | latest | Componentes base |
 | Prisma | ^6 | ORM |
-| PostgreSQL (Neon) | — | Banco prod / SQLite dev |
-| Clerk | ^6 | Autenticação produção |
+| PostgreSQL (Neon) | — | Banco prod |
+| Clerk | ^6 | Autenticação |
 | Cielo | — | Gateway de pagamento (cartão + PIX) |
 | framer-motion | ^12 | Animações |
 | Zod | ^3 | Validação |
@@ -43,6 +43,7 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 - `DIRECT_URL` — URL direta para migrations
 - `npm run build:prod` copia schema.production.prisma → schema.prisma antes do build
 - Para regenerar tipos localmente: `DIRECT_URL="pg://x" DATABASE_URL="pg://x" npx prisma generate`
+- Após schema changes: `DIRECT_URL="<url>" DATABASE_URL="<url>" npx prisma db push`
 
 ### Modelos principais
 - `UserProfile` — extensão Clerk (clerkId único)
@@ -51,18 +52,19 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 - `Cart` + `CartItem` — um por clerkId, persistido no banco; unique (cartId, productId)
 - `Order` + `OrderItem` — enum OrderStatus (PENDING/PAID/SHIPPED/DELIVERED/CANCELLED), enum PaymentMethod (WHATSAPP/CREDIT_CARD/PIX)
 - `OrderItem.price` — snapshot do preço no momento da compra
-- `SiteSettings` — singleton id="default", ~53 campos (hero, lumina, about, social, SEO, logo, newsletter, benefícios, notificationEmail, cepOrigem, pesoMedioProduto)
+- `SiteSettings` — singleton id="default", campos: hero, lumina, about, social, SEO, logo, newsletter, benefícios, notificationEmail, cepOrigem, pesoMedioProduto, whatsappNumber
 - `MediaAsset` — banco de mídia (name, url, type IMAGE|VIDEO, size)
 - `Wishlist` + `WishlistItem` — por clerkId, unique (wishlistId, productId)
 - `NewsletterSubscriber` — email único, confirmedAt
+- `ErrorLog` — log de erros (digest, message, stack, path, createdAt) — tabela `error_logs`
 
-## Auth (Clerk apenas — v0.8.0)
-- DEMO_MODE e SiteUser REMOVIDOS
-- `middleware.ts` — `clerkMiddleware` + `createRouteMatcher`
-- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/api/webhooks/**`, `/loja/**`
-- Rotas admin (`/admin/**`): exige `sessionClaims.metadata.role === "admin"`
-- Rotas protegidas (`/account`, `/cart`, `/checkout`): exige userId
-- **Não usar** `return false` — usar `redirectToSignIn()`
+## Auth (Clerk — import estático)
+- DEMO_MODE e SiteUser **completamente removidos**
+- `middleware.ts` — `clerkMiddleware` + `createRouteMatcher` com **import estático** (não dinâmico)
+- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/sobre-nos/**`, `/videos/**`, `/loja/**`, `/acesso-negado/**`, `/api/newsletter/**`, `/api/webhooks/**`, `/api/check-payment/**`, `/api/frete/**`
+- Rotas admin (`/admin/**`): exige userId + `sessionClaims.metadata.role === "admin"`
+- Rotas protegidas (`/account`, `/cart`, `/checkout`, `/wishlist`): exige userId
+- Não-admin → redirect `/acesso-negado`; não-autenticado → redirect `/sign-in`
 
 ## Carrinho (Server Actions)
 - `src/actions/cart.ts` — `addToCart`, `updateQuantity`, `removeFromCart`, `clearCart`, `getCart`
@@ -76,21 +78,31 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 - Gateway: **Cielo** (cartão de crédito + PIX)
 - `src/lib/cielo.ts` — integração Cielo
 - Webhook: `/api/webhooks/cielo/route.ts`
-- PIX polling: `/checkout/pix` + `src/components/checkout/pix-polling.tsx`
+- PIX polling: `/checkout/pix` + `src/components/checkout/pix-polling.tsx` (status: pending/paid/error/expired)
+- PIX expira em 1h automaticamente via `/api/check-payment`
 - WhatsApp: flow manual `/checkout` → redirect WhatsApp
 - `/api/check-payment` — verifica status do pagamento
+
+## Logger de Erros (v0.8.1)
+- `src/lib/logger.ts` — `logError()`: console.error JSON estruturado + salva no DB em produção
+- `src/actions/log-error.ts` — Server Action `logErrorAction(digest, path)` chamada pelo client
+- `src/app/error.tsx` — chama `logErrorAction` no useEffect ao capturar erro
+- `src/app/global-error.tsx` — captura erros no root layout (ClerkProvider etc.), envolve `<html><body>`
+- `/admin/logs` — tabela dos últimos 100 erros + botão "Limpar >7 dias"
+- Não logar stack do client para o servidor (segurança) — apenas digest + path
 
 ## Estrutura de diretórios
 ```
 src/
   app/
+    icon.svg                         — Favicon (A dourado em esmeralda, Next.js file-based)
     (auth)/sign-in/[[...sign-in]]/   — Clerk SignIn
     (auth)/sign-up/[[...sign-up]]/   — Clerk SignUp
-    (store)/                         — Layout Navbar + Footer
+    (store)/                         — Layout Navbar + Footer + WhatsAppFab
       page.tsx                       — Home
       products/page.tsx              — Listagem com filtros
       products/[slug]/page.tsx       — Detalhe + AddToCart
-      cart/page.tsx                  — Carrinho
+      cart/page.tsx                  — Carrinho + ShippingCalculator
       checkout/page.tsx              — Checkout (Cielo/PIX/WhatsApp)
       checkout/pix/page.tsx          — PIX polling
       checkout/sucesso/page.tsx      — Confirmação
@@ -100,7 +112,10 @@ src/
       loja/page.tsx
       politica-de-privacidade/page.tsx
       termos-de-uso/page.tsx
+    acesso-negado/page.tsx           — Acesso negado (luxury, para não-admin)
     account/page.tsx                 — Conta + pedidos
+    error.tsx                        — Error boundary (chama logErrorAction)
+    global-error.tsx                 — Error boundary do root layout
     admin/                           — Painel admin (role=admin)
       page.tsx                       — Dashboard métricas
       products/                      — CRUD produtos
@@ -109,12 +124,13 @@ src/
       orders/                        — Listagem + detalhe + status
       settings/page.tsx              — SiteSettings
       newsletter/page.tsx            — Inscritos
+      logs/page.tsx                  — Logs de erro (ErrorLog)
     api/
       newsletter/route.ts
       webhooks/cielo/route.ts
       check-payment/route.ts         — polling PIX + expiração automática 1h
-      frete/route.ts                 — cálculo PAC/SEDEX via Correios
-    layout.tsx                       — Root layout (fontes, metadata, favicon, ClerkProvider)
+      frete/route.ts                 — cálculo PAC/SEDEX via Correios (público)
+    layout.tsx                       — Root layout (fontes, metadata, ClerkProvider)
     globals.css                      — Tema Emerald+Gold + @theme inline
     not-found.tsx                    — 404 luxury (gold + framer particles)
     sitemap.ts                       — SEO dinâmico
@@ -125,9 +141,10 @@ src/
     orders.ts                        — envia emails após criar pedido
     admin.ts                         — mutations admin (products, categories, media, orders, settings, newsletter)
     wishlist.ts
-    users.ts                         — Clerk role management (sem DEMO_MODE)
+    users.ts                         — Clerk role management
+    log-error.ts                     — Server Action para log de erros do client
   components/
-    ui/                              — shadcn/ui + gold-button (CVA) + section-title + product-image
+    ui/                              — shadcn/ui + gold-button (CVA) + section-title + product-image + whatsapp-fab
     layout/                          — navbar.tsx (server) + navbar-client.tsx (client) + footer + mobile-nav + newsletter-form
     home/                            — hero-section + best-sellers + category-cards + lumina-highlight + nossa-historia-teaser + why-altheia
     products/                        — product-card + product-filters + product-accordion + wishlist-button
@@ -135,7 +152,7 @@ src/
     checkout/                        — checkout-form + pix-polling (com status expired)
     about/                           — SobreNosContent (client)
     videos/                          — VideosContent (client)
-    admin/                           — forms CRUD (sem admin-login-form)
+    admin/                           — forms CRUD
   lib/
     prisma.ts                        — Singleton Prisma
     auth.ts                          — getServerAuth() (Clerk apenas)
@@ -144,20 +161,18 @@ src/
     animations.ts                    — framer-motion variants
     utils.ts                         — cn(), formatPrice(), truncate(), parseImages()
     constants.ts                     — APP_NAME, ORDER_STATUS_LABEL, etc.
-    mailer.ts                        — nodemailer
-    session.ts                       — DEMO_MODE session management
+    mailer.ts                        — sendMail + sendNewOrderNotification + sendOrderConfirmationToCustomer
+    logger.ts                        — logError() estruturado (console + DB em produção)
+    correios.ts                      — calcularFrete() via API pública Correios
   schemas/
     cart.schema.ts
     checkout.schema.ts
   types/
     index.ts                         — ProductWithCategory, etc.
   context/
-    auth.tsx                         — ClerkAuthBridge (DemoAuthProvider removido)
+    auth.tsx                         — ClerkAuthBridge
   hooks/
     use-guest-cart.ts
-  lib/
-    correios.ts                      — calcularFrete() via API pública Correios
-    mailer.ts                        — sendMail + sendNewOrderNotification + sendOrderConfirmationToCustomer
 tests/
   smoke.spec.ts                      — Playwright smoke tests
 playwright.config.ts
@@ -165,11 +180,12 @@ prisma/
   schema.prisma                      — PostgreSQL (= schema.production.prisma)
   schema.production.prisma           — Prod (PostgreSQL) — source of truth
   seed.ts
-middleware.ts                        — Auth + security headers
+middleware.ts                        — Clerk (import estático) + security headers
 ```
 
 ## SiteSettings (singleton id="default") — campos principais
 - `siteLogoUrl` — logo PNG navbar
+- `whatsappNumber` — número WhatsApp para o FAB e checkout (formato: 5511999999999)
 - `heroTitle/Subtitle/ImageUrl/VideoUrl/leftVideoUrl/rightVideoUrl/heroLogoUrl`
 - `lumina*` — LuminaHighlight: label, title, subtitle, imageUrl, badgeText, productLink
 - `aboutTitle/Text/ImageUrl`
@@ -192,14 +208,18 @@ middleware.ts                        — Auth + security headers
 - Server Components NÃO podem ter event handlers
 - Todas as Server Actions: Zod validation + `getServerAuth()` + `revalidatePath()` + retornam `ActionResult<T>`
 - Checkbox em Zod: **`v === "on"`** (não `v !== "off"`)
+- Favicon: arquivo `src/app/icon.svg` (Next.js file-based, não declarar em metadata)
+- `middleware.ts`: SEMPRE import estático do Clerk — nunca `await import("@clerk/nextjs/server")`
 
 ## Bugs corrigidos (não regredir)
-- Admin middleware: verificar `sessionClaims.metadata.role === "admin"`, não `return false`
+- Admin middleware: verificar `sessionClaims.metadata.role === "admin"`, redirecionar para `/acesso-negado`
 - Prisma hot-reload Turbopack: singleton com `globalThis` em `prisma.ts`
 - images String[]: PostgreSQL suporta nativo — sem JSON.stringify/parse
 - P2002 (unique constraint): tratar nos actions com try/catch específico
 - Security headers: CSP sem Stripe (removido), incluir domínios Cielo se necessário
 - Produto toggle active: Zod usa `v === "on"` — checkbox não envia campo quando desmarcado
+- Middleware Clerk: import **estático** (`import { clerkMiddleware } from "@clerk/nextjs/server"`) — import dinâmico causa falha no Edge Runtime
+- Schema changes em produção: SEMPRE rodar `prisma db push` com DIRECT_URL após adicionar campos — sem isso o site cai com erro 500 nas queries
 
 ## Comandos úteis
 ```bash
@@ -209,8 +229,8 @@ source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npx tsc --noEmit
 # Dev
 source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run dev
 
-# Migrations dev
-source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run db:push
+# Migration produção (após schema changes)
+DIRECT_URL="<url-neon-direta>" DATABASE_URL="<url-neon-direta>" npx prisma db push
 
 # Seed
 source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run db:seed
@@ -229,10 +249,9 @@ source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run build:prod
 - Email: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`, `SMTP_FROM` (para notificações)
 - `DEMO_MODE` REMOVIDO — não adicionar no Vercel
 - `DATABASE_URL` (pooled): `...?sslmode=require&pgbouncer=true&connect_timeout=15`
-- `DIRECT_URL` (direta): `...?sslmode=require` (sem pgbouncer, sem channel_binding)
+- `DIRECT_URL` (direta): `...?sslmode=require` (sem pgbouncer)
 - `npm run build:prod` copia schema.production.prisma antes do build
-- Tabelas criadas com `npx prisma db push` usando DIRECT_URL do Neon
-- Após schema changes: rodar `prisma db push` em produção para aplicar novos campos
+- **Após qualquer schema change:** rodar `prisma db push` com DIRECT_URL do Neon antes ou logo após o deploy
 
 ## Bugs corrigidos pós-deploy (não regredir)
 - `layout.tsx`: SEMPRE `<ClerkProvider><ClerkAuthBridge>{children}</ClerkAuthBridge></ClerkProvider>`
@@ -253,7 +272,7 @@ npm run test:e2e:ui
 ```
 
 ## Branches
-- `main` — produção (v0.8.0)
+- `main` — produção (v0.8.1)
 - `Altheia-0.8.0` — estado v0.7.0 antes das correções v0.8.0
 - `Altheia-0.7.0` — gateway Cielo + account redesign
 - `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
