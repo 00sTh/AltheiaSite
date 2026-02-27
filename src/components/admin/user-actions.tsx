@@ -5,15 +5,13 @@ import { useRouter } from "next/navigation";
 import { Shield, ShieldOff, Trash2, Loader2 } from "lucide-react";
 import { setUserAdminRole, deleteAdminUser } from "@/actions/users";
 
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
-
 interface UserActionsProps {
   userId: string;
   clerkId: string;
   isCurrentAdmin?: boolean;
 }
 
-export function UserRoleButton({ userId, clerkId, isCurrentAdmin }: UserActionsProps) {
+export function UserRoleButton({ userId: _userId, clerkId, isCurrentAdmin }: UserActionsProps) {
   const [isPending, startTransition] = useTransition();
   const [msg, setMsg] = useState<string | null>(null);
   const router = useRouter();
@@ -34,7 +32,7 @@ export function UserRoleButton({ userId, clerkId, isCurrentAdmin }: UserActionsP
     <div className="flex flex-col gap-1">
       <button
         onClick={handleToggle}
-        disabled={isPending || DEMO_MODE}
+        disabled={isPending}
         className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed"
         style={{
           backgroundColor: isCurrentAdmin
@@ -45,11 +43,6 @@ export function UserRoleButton({ userId, clerkId, isCurrentAdmin }: UserActionsP
             : "1px solid rgba(201,162,39,0.3)",
           color: isCurrentAdmin ? "#e05252" : "#C9A227",
         }}
-        title={
-          DEMO_MODE
-            ? "Disponível apenas em produção (Clerk)"
-            : undefined
-        }
       >
         {isPending ? (
           <Loader2 className="h-4 w-4 animate-spin" />
@@ -60,11 +53,6 @@ export function UserRoleButton({ userId, clerkId, isCurrentAdmin }: UserActionsP
         )}
         {isCurrentAdmin ? "Remover Admin" : "Tornar Admin"}
       </button>
-      {DEMO_MODE && (
-        <p className="text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
-          Role management disponível apenas em produção.
-        </p>
-      )}
       {msg && (
         <p className="text-xs" style={{ color: "#e05252" }}>
           {msg}
@@ -85,7 +73,7 @@ export function UserDeleteButton({ userId }: { userId: string }) {
     startTransition(async () => {
       const res = await deleteAdminUser(userId);
       if (res.success) {
-        router.push("/admin/users");
+        router.push("/admin");
       } else {
         setMsg(res.error ?? "Erro desconhecido.");
       }

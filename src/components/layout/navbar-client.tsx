@@ -2,15 +2,11 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ShoppingCart, User, Heart, LayoutDashboard } from "lucide-react";
+import { ShoppingCart, User, Heart, LayoutDashboard, LogOut } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
-import { LogoutButton } from "./logout-button";
 import { SignOutButton } from "@clerk/nextjs";
-import { LogOut } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
-
-const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 const navLinks = [
   { href: "/", label: "Início" },
@@ -71,10 +67,10 @@ export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: Navbar
           ))}
         </nav>
 
-        {/* Centro — logo absoluto */}
+        {/* Centro — logo absoluto (min-w-0 evita overflow em mobile) */}
         <Link
           href="/"
-          className="absolute left-1/2 -translate-x-1/2 select-none"
+          className="absolute left-1/2 -translate-x-1/2 select-none max-w-[40%] sm:max-w-[50%] md:max-w-none"
           aria-label="Ir para início"
         >
           {siteLogoUrl ? (
@@ -83,7 +79,7 @@ export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: Navbar
               alt={APP_NAME}
               width={140}
               height={42}
-              className="object-contain h-10 w-auto"
+              className="object-contain h-7 w-auto sm:h-8 md:h-10"
               priority
             />
           ) : (
@@ -102,12 +98,12 @@ export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: Navbar
 
         {/* Direita — ícones de ação */}
         <div className="ml-auto flex items-center gap-1">
-          {/* Wishlist (só logado) */}
+          {/* Wishlist (só logado, oculto em mobile — já está no MobileNav) */}
           {userId && (
             <Link
               href="/wishlist"
               aria-label="Lista de Desejos"
-              className="group flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200"
+              className="group hidden sm:flex items-center justify-center w-11 h-11 rounded-full transition-all duration-200"
               style={{ color: "#C8BBA8" }}
             >
               <Heart
@@ -166,23 +162,19 @@ export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: Navbar
 
           {/* Logout */}
           {userId && (
-            DEMO_MODE ? (
-              <LogoutButton />
-            ) : (
-              <SignOutButton>
-                <button
-                  title="Sair"
-                  className="flex items-center justify-center h-9 w-9 rounded-full transition-all"
-                  style={{
-                    backgroundColor: "rgba(224,82,82,0.1)",
-                    border: "1px solid rgba(224,82,82,0.2)",
-                    color: "rgba(224,82,82,0.8)",
-                  }}
-                >
-                  <LogOut className="h-4 w-4" />
-                </button>
-              </SignOutButton>
-            )
+            <SignOutButton>
+              <button
+                title="Sair"
+                className="flex items-center justify-center h-9 w-9 rounded-full transition-all"
+                style={{
+                  backgroundColor: "rgba(224,82,82,0.1)",
+                  border: "1px solid rgba(224,82,82,0.2)",
+                  color: "rgba(224,82,82,0.8)",
+                }}
+              >
+                <LogOut className="h-4 w-4" />
+              </button>
+            </SignOutButton>
           )}
 
           {/* Hamburger mobile */}

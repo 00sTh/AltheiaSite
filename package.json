@@ -16,7 +16,10 @@
     "db:seed": "tsx prisma/seed.ts",
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset --force",
-    "db:push:prod": "cp prisma/schema.production.prisma prisma/schema.prisma && prisma db push"
+    "db:push:prod": "cp prisma/schema.production.prisma prisma/schema.prisma && prisma db push",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:install": "playwright install chromium"
   },
   "dependencies": {
     "@clerk/nextjs": "^6.12.0",
@@ -44,6 +47,7 @@
     "zod": "^3.24.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.58.2",
     "@tailwindcss/postcss": "^4.0.9",
     "@types/node": "^22.12.0",
     "@types/react": "^19.0.7",

@@ -1,12 +1,7 @@
 "use client";
 
 /**
- * src/context/auth.tsx — Contexto de autenticação client-side
- *
- * Em DEMO_MODE: fornece um usuário fixo via Context (sem Clerk).
- * Em produção: usa useUser() do Clerk via contexto.
- *
- * Usar useAuth() em vez de useUser() do Clerk em Client Components.
+ * src/context/auth.tsx — Contexto de autenticação client-side via Clerk
  */
 
 import { createContext, useContext, type ReactNode } from "react";
@@ -28,32 +23,7 @@ const AuthContext = createContext<AuthContextValue>({
 
 export const useAuth = () => useContext(AuthContext);
 
-/** Provedor para DEMO_MODE — reflete sessão real do servidor */
-export function DemoAuthProvider({
-  children,
-  initialAuth,
-}: {
-  children: ReactNode;
-  initialAuth: { isSignedIn: boolean; userId: string | null; userFirstName: string | null };
-}) {
-  return (
-    <AuthContext.Provider
-      value={{
-        isLoaded: true,
-        isSignedIn: initialAuth.isSignedIn,
-        userId: initialAuth.userId,
-        userFirstName: initialAuth.userFirstName,
-      }}
-    >
-      {children}
-    </AuthContext.Provider>
-  );
-}
-
-/**
- * Provedor para produção — bridge entre Clerk e o contexto interno.
- * Usar quando DEMO_MODE=false.
- */
+/** Bridge entre Clerk e o contexto interno */
 export function ClerkAuthBridge({ children }: { children: ReactNode }) {
   const { isLoaded, isSignedIn, user } = useUser();
 
@@ -69,4 +39,9 @@ export function ClerkAuthBridge({ children }: { children: ReactNode }) {
       {children}
     </AuthContext.Provider>
   );
+}
+
+// Manter compatibilidade: DemoAuthProvider agora é apenas um alias sem funcionalidade
+export function DemoAuthProvider({ children }: { children: ReactNode; initialAuth?: unknown }) {
+  return <ClerkAuthBridge>{children}</ClerkAuthBridge>;
 }

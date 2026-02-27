@@ -3,7 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { prisma } from "@/lib/prisma";
-import { getServerAuth, DEMO_USER_ID } from "@/lib/auth";
+import { getServerAuth } from "@/lib/auth";
 
 // ─── Auth guard ─────────────────────────────────────────────────────────────
 
@@ -23,8 +23,6 @@ export async function getAdminUsers(search?: string) {
 
   const users = await prisma.userProfile.findMany({
     where: {
-      // Excluir usuário demo do painel
-      clerkId: { not: DEMO_USER_ID },
       ...(search && {
         OR: [
           {
@@ -104,21 +102,13 @@ export async function setUserAdminRole(
 ): Promise<{ success: boolean; error?: string }> {
   await requireAdmin();
 
-  const DEMO_MODE = process.env.DEMO_MODE === "true";
-  if (DEMO_MODE) {
-    return {
-      success: false,
-      error: "Gerenciamento de roles disponível apenas em produção (Clerk).",
-    };
-  }
-
   try {
     const { clerkClient } = await import("@clerk/nextjs/server");
     const client = await clerkClient();
     await client.users.updateUserMetadata(clerkId, {
       publicMetadata: { role: makeAdmin ? "admin" : "customer" },
     });
-    revalidatePath("/admin/users");
+    revalidatePath("/admin");
     return { success: true };
   } catch (err) {
     console.error("Clerk setRole error:", err);

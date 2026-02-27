@@ -6,6 +6,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/prisma";
 import { PaymentMethod } from "@prisma/client";
 import { getServerAuth, getServerUser } from "@/lib/auth";
+import { sendNewOrderNotification, sendOrderConfirmationToCustomer } from "@/lib/mailer";
 import {
   createCreditCardPayment,
   createPixPayment,
@@ -161,6 +162,31 @@ export async function createOrder(
 
   revalidatePath("/cart");
   revalidatePath("/", "layout");
+
+  // ── Enviar notificações por email (não bloqueia o fluxo se falhar) ────────
+  try {
+    const settings = await prisma.siteSettings.findUnique({
+      where: { id: "default" },
+      select: { notificationEmail: true },
+    });
+    const orderSummary = {
+      id: order.id,
+      customerName: order.customerName,
+      customerEmail: order.customerEmail,
+      price: total,
+      paymentMethod,
+      itemCount: cart.items.length,
+    };
+    const emailPromises: Promise<void>[] = [
+      sendOrderConfirmationToCustomer(orderSummary),
+    ];
+    if (settings?.notificationEmail) {
+      emailPromises.push(sendNewOrderNotification(orderSummary, settings.notificationEmail));
+    }
+    await Promise.allSettled(emailPromises);
+  } catch {
+    // Falha no email não deve bloquear o pedido
+  }
 
   // ── WhatsApp flow (sem pagamento online) ─────────────────────────────────
   if (paymentMethod === "WHATSAPP") {

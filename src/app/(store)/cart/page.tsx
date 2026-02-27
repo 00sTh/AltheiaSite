@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { ShoppingCart, ArrowRight } from "lucide-react";
 import { CartItemCard } from "@/components/cart/cart-item";
+import { ShippingCalculator } from "@/components/cart/shipping-calculator";
 import { getCart } from "@/actions/cart";
 import { getSiteSettings } from "@/actions/admin";
 import { formatPrice } from "@/lib/utils";
@@ -124,6 +125,15 @@ export default async function CartPage() {
                 </p>
               )}
             </div>
+
+            {!freeShipping && (
+              <div
+                className="pt-4"
+                style={{ borderTop: "1px solid rgba(201,162,39,0.1)" }}
+              >
+                <ShippingCalculator itemCount={itemCount} />
+              </div>
+            )}
 
             <div
               className="pt-4 flex justify-between font-bold text-xl"

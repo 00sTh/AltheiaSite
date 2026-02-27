@@ -41,11 +41,6 @@ const globalForPrisma = globalThis as unknown as {
 };
 
 function getOrCreateClient(): PrismaClientSingleton {
-  // Se o cliente cacheado não tiver o modelo SiteUser (schema desatualizado),
-  // descarta e recria — evita erros após mudanças no schema sem restart completo.
-  if (globalForPrisma.prisma && !("siteUser" in globalForPrisma.prisma)) {
-    globalForPrisma.prisma = undefined;
-  }
   return globalForPrisma.prisma ?? createPrismaClient();
 }
 

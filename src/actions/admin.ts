@@ -82,6 +82,9 @@ const siteSettingsSchema = z.object({
   benefit3Icon: z.string().max(50).optional().or(z.literal("")),
   benefit3Title: z.string().max(200).optional().or(z.literal("")),
   benefit3Text: z.string().max(500).optional().or(z.literal("")),
+  notificationEmail: z.string().email().optional().or(z.literal("")),
+  cepOrigem: z.string().max(9).optional().or(z.literal("")),
+  pesoMedioProduto: z.coerce.number().int().min(1).max(30000).optional(),
 });
 
 export async function updateSiteSettings(formData: FormData) {
@@ -117,6 +120,7 @@ export async function updateSiteSettings(formData: FormData) {
       twitterUrl: nullable(data.twitterUrl),
       metaTitle: nullable(data.metaTitle),
       metaDescription: nullable(data.metaDescription),
+      notificationEmail: nullable(data.notificationEmail),
     },
     update: {
       ...data,
@@ -134,6 +138,7 @@ export async function updateSiteSettings(formData: FormData) {
       twitterUrl: nullable(data.twitterUrl),
       metaTitle: nullable(data.metaTitle),
       metaDescription: nullable(data.metaDescription),
+      notificationEmail: nullable(data.notificationEmail),
     },
   });
 
@@ -163,7 +168,7 @@ const productSchema = z.object({
   active: z
     .string()
     .optional()
-    .transform((v) => v !== "off"),
+    .transform((v) => v === "on"),
   imageUrls: z.string().optional(), // JSON array of URLs
   ingredients: z.string().optional(),
   usage: z.string().optional(),

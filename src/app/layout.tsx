@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono, Playfair_Display } from "next/font/google";
 import { ClerkProvider } from "@clerk/nextjs";
-import { DemoAuthProvider, ClerkAuthBridge } from "@/context/auth";
+import { ClerkAuthBridge } from "@/context/auth";
 import "./globals.css";
 import { APP_DESCRIPTION, APP_NAME } from "@/lib/constants";
 
@@ -29,6 +29,9 @@ export const metadata: Metadata = {
     template: `%s | ${APP_NAME}`,
   },
   description: APP_DESCRIPTION,
+  icons: {
+    icon: "/uploads/a.ico",
+  },
   openGraph: {
     type: "website",
     locale: "pt_BR",
@@ -36,44 +39,17 @@ export const metadata: Metadata = {
   },
 };
 
-const isDemoMode = process.env.DEMO_MODE === "true";
-
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
-  let demoAuth: { isSignedIn: boolean; userId: string | null; userFirstName: string | null } = {
-    isSignedIn: false,
-    userId: null,
-    userFirstName: null,
-  };
-
-  if (isDemoMode) {
-    const { getSession } = await import("@/lib/session");
-    const { prisma } = await import("@/lib/prisma");
-    const userId = await getSession();
-    if (userId) {
-      const user = await prisma.siteUser.findUnique({
-        where: { id: userId, active: true },
-        select: { id: true, username: true },
-      });
-      if (user) {
-        demoAuth = { isSignedIn: true, userId: user.id, userFirstName: user.username };
-      }
-    }
-  }
-
   return (
     <html lang="pt-BR" suppressHydrationWarning>
       <body
         className={`${geistSans.variable} ${geistMono.variable} ${playfairDisplay.variable} font-sans antialiased`}
       >
-        {isDemoMode ? (
-          <DemoAuthProvider initialAuth={demoAuth}>{children}</DemoAuthProvider>
-        ) : (
-          <ClerkProvider>
-            <ClerkAuthBridge>{children}</ClerkAuthBridge>
-          </ClerkProvider>
-        )}
+        <ClerkProvider>
+          <ClerkAuthBridge>{children}</ClerkAuthBridge>
+        </ClerkProvider>
       </body>
     </html>
   );

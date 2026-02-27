@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
-import { Menu, X, ShoppingCart, User, LayoutDashboard } from "lucide-react";
+import { Menu, X, ShoppingCart, User, LayoutDashboard, Heart } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
 const navLinks = [
@@ -147,6 +147,18 @@ export function MobileNav({ userId, isAdmin, cartCount }: MobileNavProps) {
                   >
                     <LayoutDashboard className="h-4 w-4" />
                     <span>Painel Admin</span>
+                  </Link>
+                )}
+
+                {userId && (
+                  <Link
+                    href="/wishlist"
+                    onClick={() => setOpen(false)}
+                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-sm transition-all hover:text-[#C9A227]"
+                    style={{ color: "#C8BBA8" }}
+                  >
+                    <Heart className="h-4 w-4" style={{ color: "#C9A227" }} />
+                    <span>Lista de Desejos</span>
                   </Link>
                 )}
 

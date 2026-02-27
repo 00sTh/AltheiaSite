@@ -3,35 +3,11 @@
  * Execução: npm run db:seed
  */
 import { PrismaClient } from "@prisma/client";
-import { scrypt, randomBytes } from "crypto";
-import { promisify } from "util";
 
 const prisma = new PrismaClient();
-const scryptAsync = promisify(scrypt);
-
-async function hashPassword(password: string): Promise<string> {
-  const salt = randomBytes(16).toString("hex");
-  const hash = (await scryptAsync(password, salt, 64)) as Buffer;
-  return `${salt}:${hash.toString("hex")}`;
-}
 
 async function main() {
   console.log("🌱 Iniciando seed...");
-
-  // ── Usuário admin inicial ──────────────────────────────────────────────
-  const sairosPas = process.env.SAIROS_INITIAL_PASS ?? "Xk!7mQ#4pNz$9rLv";
-  const sairos = await prisma.siteUser.upsert({
-    where: { username: "sairos" },
-    update: {},
-    create: {
-      username: "sairos",
-      email: "sairos@altheia.com",
-      passwordHash: await hashPassword(sairosPas),
-      role: "ADMIN",
-      emailVerified: true,
-    },
-  });
-  console.log(`✓ SiteUser admin criado: ${sairos.username} (${sairos.email})`);
 
   // ── Categorias ──────────────────────────────────────────────────────
   const skincare = await prisma.category.upsert({

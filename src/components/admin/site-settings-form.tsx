@@ -441,6 +441,54 @@ export function SiteSettingsForm({ settings }: { settings: SiteSettings }) {
         </div>
       </div>
 
+      {/* Notificações */}
+      <div>
+        {sectionTitle("Notificações de Pedidos")}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div className="md:col-span-2">
+            <label style={labelStyle}>Email para notificação de novos pedidos</label>
+            <input
+              name="notificationEmail"
+              type="email"
+              defaultValue={(settings as { notificationEmail?: string | null }).notificationEmail ?? ""}
+              style={inputStyle}
+              placeholder="dono@altheia.com"
+            />
+            {hint("Quando um novo pedido for criado, um email será enviado para este endereço.")}
+          </div>
+        </div>
+      </div>
+
+      {/* Frete Correios */}
+      <div>
+        {sectionTitle("Frete Correios")}
+        <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
+          <div>
+            <label style={labelStyle}>CEP de origem (loja)</label>
+            <input
+              name="cepOrigem"
+              defaultValue={(settings as { cepOrigem?: string }).cepOrigem ?? "01310100"}
+              style={inputStyle}
+              placeholder="01310100"
+              maxLength={9}
+            />
+            {hint("Apenas números ou formato 00000-000.")}
+          </div>
+          <div>
+            <label style={labelStyle}>Peso médio por produto (gramas)</label>
+            <input
+              name="pesoMedioProduto"
+              type="number"
+              min="1"
+              max="30000"
+              defaultValue={(settings as { pesoMedioProduto?: number }).pesoMedioProduto ?? 300}
+              style={inputStyle}
+            />
+            {hint("Peso estimado médio de cada produto para cálculo do frete.")}
+          </div>
+        </div>
+      </div>
+
       <button
         type="submit"
         disabled={isPending}

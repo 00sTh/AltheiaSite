@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { CheckCircle, Clock, Copy, Check, RefreshCw } from "lucide-react";
+import { CheckCircle, Clock, Copy, Check, RefreshCw, AlertCircle } from "lucide-react";
 import { formatPrice } from "@/lib/utils";
 import QRCode from "react-qr-code";
 
@@ -12,7 +12,7 @@ interface Props {
   pixQrCode: string;
 }
 
-type Status = "pending" | "paid" | "error";
+type Status = "pending" | "paid" | "error" | "expired";
 
 export function PixPolling({ orderId, paymentId, pixQrCode }: Props) {
   const router = useRouter();
@@ -25,12 +25,14 @@ export function PixPolling({ orderId, paymentId, pixQrCode }: Props) {
     try {
       const res = await fetch(`/api/check-payment?paymentId=${encodeURIComponent(paymentId)}&orderId=${encodeURIComponent(orderId)}`);
       if (!res.ok) return;
-      const data = (await res.json()) as { paid: boolean; denied: boolean };
+      const data = (await res.json()) as { paid: boolean; denied: boolean; expired?: boolean };
       if (data.paid) {
         setStatus("paid");
         setTimeout(() => {
           router.push(`/checkout/sucesso?orderId=${orderId}&paid=1`);
         }, 2000);
+      } else if (data.expired) {
+        setStatus("expired");
       } else if (data.denied) {
         setStatus("error");
       }
@@ -69,6 +71,32 @@ export function PixPolling({ orderId, paymentId, pixQrCode }: Props) {
           PIX confirmado!
         </h1>
         <p style={{ color: "#C8BBA8" }}>Redirecionando...</p>
+      </div>
+    );
+  }
+
+  if (status === "expired") {
+    return (
+      <div className="w-full max-w-md text-center py-16">
+        <div
+          className="inline-flex items-center justify-center w-20 h-20 rounded-full mb-6"
+          style={{ backgroundColor: "rgba(239,68,68,0.1)", border: "1px solid rgba(239,68,68,0.3)" }}
+        >
+          <AlertCircle className="h-10 w-10" style={{ color: "#F87171" }} />
+        </div>
+        <h1 className="font-serif text-3xl font-bold mb-2" style={{ color: "#F5F0E6" }}>
+          PIX expirado
+        </h1>
+        <p className="mb-6" style={{ color: "#C8BBA8" }}>
+          O prazo de 1 hora para pagamento via PIX foi encerrado. O pedido foi cancelado e o estoque restaurado.
+        </p>
+        <a
+          href="/cart"
+          className="inline-flex items-center justify-center px-6 py-3 rounded-xl text-sm font-semibold tracking-wider transition-all hover:shadow-[0_0_20px_rgba(201,162,39,0.3)]"
+          style={{ backgroundColor: "#C9A227", color: "#0A3D2F" }}
+        >
+          Voltar ao carrinho
+        </a>
       </div>
     );
   }
