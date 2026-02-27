@@ -192,9 +192,13 @@ export async function createProduct(formData: FormData) {
   // Handle file upload
   const file = formData.get("imageFile") as File | null;
   if (file && file.size > 0) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const { url } = await uploadImage(buffer, `${data.slug}-${Date.now()}.jpg`);
-    images = [url, ...images];
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const { url } = await uploadImage(buffer, `${data.slug}-${Date.now()}.jpg`);
+      images = [url, ...images];
+    } catch (uploadErr) {
+      return { success: false, error: (uploadErr as Error).message };
+    }
   }
 
   let product;
@@ -236,9 +240,13 @@ export async function updateProduct(id: string, formData: FormData) {
 
   const file = formData.get("imageFile") as File | null;
   if (file && file.size > 0) {
-    const buffer = Buffer.from(await file.arrayBuffer());
-    const { url } = await uploadImage(buffer, `${data.slug}-${Date.now()}.jpg`);
-    images = [url, ...images];
+    try {
+      const buffer = Buffer.from(await file.arrayBuffer());
+      const { url } = await uploadImage(buffer, `${data.slug}-${Date.now()}.jpg`);
+      images = [url, ...images];
+    } catch (uploadErr) {
+      return { success: false, error: (uploadErr as Error).message };
+    }
   }
 
   try {
@@ -416,8 +424,14 @@ export async function createMediaAsset(formData: FormData) {
 
   const ext = file.name.split(".").pop() ?? "jpg";
   const filename = `media-${Date.now()}.${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  const { url } = await uploadImage(buffer, filename);
+  let url: string;
+  try {
+    const buffer = Buffer.from(await file.arrayBuffer());
+    const result = await uploadImage(buffer, filename);
+    url = result.url;
+  } catch (uploadErr) {
+    return { success: false, error: (uploadErr as Error).message };
+  }
 
   const asset = await prisma.mediaAsset.create({
     data: {
