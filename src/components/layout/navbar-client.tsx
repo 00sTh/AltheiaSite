@@ -6,6 +6,8 @@ import { ShoppingCart, User, Heart, LayoutDashboard } from "lucide-react";
 import { useEffect, useState } from "react";
 import { MobileNav } from "./mobile-nav";
 import { LogoutButton } from "./logout-button";
+import { SignOutButton } from "@clerk/nextjs";
+import { LogOut } from "lucide-react";
 import { APP_NAME } from "@/lib/constants";
 
 const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
@@ -162,8 +164,26 @@ export function NavbarClient({ userId, isAdmin, cartCount, siteLogoUrl }: Navbar
             />
           </Link>
 
-          {/* Logout (DEMO_MODE, usuário logado) */}
-          {DEMO_MODE && userId && <LogoutButton />}
+          {/* Logout */}
+          {userId && (
+            DEMO_MODE ? (
+              <LogoutButton />
+            ) : (
+              <SignOutButton>
+                <button
+                  title="Sair"
+                  className="flex items-center justify-center h-9 w-9 rounded-full transition-all"
+                  style={{
+                    backgroundColor: "rgba(224,82,82,0.1)",
+                    border: "1px solid rgba(224,82,82,0.2)",
+                    color: "rgba(224,82,82,0.8)",
+                  }}
+                >
+                  <LogOut className="h-4 w-4" />
+                </button>
+              </SignOutButton>
+            )
+          )}
 
           {/* Hamburger mobile */}
           <MobileNav userId={userId} isAdmin={isAdmin} cartCount={cartCount} />
