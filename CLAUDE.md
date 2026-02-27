@@ -4,7 +4,7 @@
 
 ## Visão Geral
 E-commerce de cosméticos para a empresa Althéia. Plataforma de luxo com tema Emerald + Gold.
-Versão atual: **0.8.1** (main — produção).
+Versão atual: **0.9.0** (main — produção).
 
 ## Stack
 | Tecnologia | Versão | Propósito |
@@ -61,7 +61,7 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 ## Auth (Clerk — import estático)
 - DEMO_MODE e SiteUser **completamente removidos**
 - `middleware.ts` — `clerkMiddleware` + `createRouteMatcher` com **import estático** (não dinâmico)
-- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/sobre-nos/**`, `/videos/**`, `/loja/**`, `/acesso-negado/**`, `/api/newsletter/**`, `/api/webhooks/**`, `/api/check-payment/**`, `/api/frete/**`
+- Rotas públicas: `/`, `/sign-in`, `/sign-up`, `/products/**`, `/sobre-nos/**`, `/videos/**`, `/loja/**`, `/acesso-negado/**`, `/cart/**`, `/checkout/**`, `/api/newsletter/**`, `/api/webhooks/**`, `/api/check-payment/**`, `/api/frete/**`
 - Rotas admin (`/admin/**`): exige userId + `sessionClaims.metadata.role === "admin"`
 - Rotas protegidas (`/account`, `/cart`, `/checkout`, `/wishlist`): exige userId
 - Não-admin → redirect `/acesso-negado`; não-autenticado → redirect `/sign-in`
@@ -82,6 +82,17 @@ Via nvm — sempre rodar `source /home/sth/.nvm/nvm.sh` antes de npm/npx.
 - PIX expira em 1h automaticamente via `/api/check-payment`
 - WhatsApp: flow manual `/checkout` → redirect WhatsApp
 - `/api/check-payment` — verifica status do pagamento
+
+## Guest Checkout (v0.9.0)
+- Qualquer pessoa compra sem conta — `/cart` e `/checkout` são rotas **públicas**
+- `GuestCartView` — client component em `src/components/cart/guest-cart-view.tsx` para usuários não autenticados
+- `CheckoutForm` aceita `isGuest` prop — lê localStorage, busca produtos via `getProductsByIds`, envia `guestItems` JSON
+- `createOrder` tem dois caminhos: guest (lê `guestItems` do form) e autenticado (lê cart do banco)
+- Pedidos guest têm `Order.userProfileId = null`, CPF em `Order.customerCpf`
+- `getOrder()` — auth users só veem próprios pedidos; guests só veem pedidos com `userProfileId=null`
+- **Emails desativados** — `sendOrderConfirmationToCustomer` e `sendNewOrderNotification` removidas do createOrder
+- `Order.customerCpf String?` — campo novo no schema
+- CPF exibido com máscara `000.000.000-00` no checkout
 
 ## Logger de Erros (v0.8.1)
 - `src/lib/logger.ts` — `logError()`: console.error JSON estruturado + salva no DB em produção
@@ -272,7 +283,7 @@ npm run test:e2e:ui
 ```
 
 ## Branches
-- `main` — produção (v0.8.1)
+- `main` — produção (v0.9.0)
 - `Altheia-0.8.0` — estado v0.7.0 antes das correções v0.8.0
 - `Altheia-0.7.0` — gateway Cielo + account redesign
 - `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
