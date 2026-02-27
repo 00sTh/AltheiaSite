@@ -40,8 +40,3 @@ export function ClerkAuthBridge({ children }: { children: ReactNode }) {
     </AuthContext.Provider>
   );
 }
-
-// Manter compatibilidade: DemoAuthProvider agora é apenas um alias sem funcionalidade
-export function DemoAuthProvider({ children }: { children: ReactNode; initialAuth?: unknown }) {
-  return <ClerkAuthBridge>{children}</ClerkAuthBridge>;
-}

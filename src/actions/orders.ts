@@ -1,6 +1,5 @@
 "use server";
 
-import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
@@ -434,16 +433,17 @@ export async function getOrder(orderId: string) {
       select: { id: true },
     });
 
-    if (userProfile) {
-      const order = await prisma.order.findUnique({
-        where: { id: orderId, userProfileId: userProfile.id },
-        include,
-      });
-      if (order) return order;
-    }
+    // Authenticated user: only return their own order
+    // If no profile exists yet, they can't own any order — return null
+    if (!userProfile) return null;
+
+    return prisma.order.findUnique({
+      where: { id: orderId, userProfileId: userProfile.id },
+      include,
+    });
   }
 
-  // Guest order (userProfileId is null — anyone with the order ID can view it)
+  // Unauthenticated: only allow viewing guest orders (userProfileId is null)
   return prisma.order.findFirst({
     where: { id: orderId, userProfileId: null },
     include,
