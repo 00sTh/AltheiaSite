@@ -17,9 +17,20 @@ import type { CartWithItems } from "@/types";
 // ─────────────────────────────────────────────────────────────────────────────
 
 async function getOrCreateCart(clerkId: string) {
+  const productSelect = {
+    select: {
+      id: true,
+      name: true,
+      slug: true,
+      price: true,
+      stock: true,
+      images: true,
+    },
+  };
+
   let cart = await prisma.cart.findUnique({
     where: { clerkId },
-    include: { items: { include: { product: true } } },
+    include: { items: { include: { product: productSelect } } },
   });
 
   if (!cart) {
@@ -30,7 +41,7 @@ async function getOrCreateCart(clerkId: string) {
 
     cart = await prisma.cart.create({
       data: { clerkId, userProfileId: profile?.id },
-      include: { items: { include: { product: true } } },
+      include: { items: { include: { product: productSelect } } },
     });
   }
 

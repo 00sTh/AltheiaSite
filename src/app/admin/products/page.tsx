@@ -3,16 +3,32 @@ import Link from "next/link";
 import Image from "next/image";
 import { prisma } from "@/lib/prisma";
 import { formatPrice, parseImages } from "@/lib/utils";
-import { Plus, Pencil, EyeOff, Eye } from "lucide-react";
+import { Plus, Pencil, EyeOff, Eye, ChevronLeft, ChevronRight } from "lucide-react";
 import { ProductRowActions } from "@/components/admin/product-row-actions";
 
 export const metadata: Metadata = { title: "Admin — Produtos" };
 
-export default async function AdminProductsPage() {
-  const products = await prisma.product.findMany({
-    include: { category: true },
-    orderBy: { createdAt: "desc" },
-  });
+const TAKE = 20;
+
+export default async function AdminProductsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
+  const { page: pageParam } = await searchParams;
+  const page = Math.max(1, Number(pageParam ?? 1));
+
+  const [products, total] = await Promise.all([
+    prisma.product.findMany({
+      include: { category: { select: { name: true } } },
+      orderBy: { createdAt: "desc" },
+      take: TAKE,
+      skip: (page - 1) * TAKE,
+    }),
+    prisma.product.count(),
+  ]);
+
+  const pages = Math.ceil(total / TAKE);
 
   return (
     <div>
@@ -22,7 +38,7 @@ export default async function AdminProductsPage() {
             Produtos
           </h1>
           <p className="text-sm mt-1" style={{ color: "rgba(200,187,168,0.6)" }}>
-            {products.length} produto{products.length !== 1 ? "s" : ""} cadastrados
+            {total} produto{total !== 1 ? "s" : ""} cadastrados
           </p>
         </div>
         <Link
@@ -148,6 +164,59 @@ export default async function AdminProductsPage() {
             )}
           </tbody>
         </table>
+
+        {/* Paginação */}
+        {pages > 1 && (
+          <div
+            className="flex items-center justify-between px-5 py-4"
+            style={{
+              borderTop: "1px solid rgba(201,162,39,0.1)",
+              backgroundColor: "#0F2E1E",
+            }}
+          >
+            <p className="text-xs" style={{ color: "rgba(200,187,168,0.5)" }}>
+              Página {page} de {pages}
+            </p>
+            <div className="flex items-center gap-2">
+              {page > 1 ? (
+                <Link
+                  href={`/admin/products?page=${page - 1}`}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-[#C9A227]"
+                  style={{ color: "#C8BBA8", border: "1px solid rgba(201,162,39,0.2)" }}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                  Anterior
+                </Link>
+              ) : (
+                <span
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium opacity-30 cursor-not-allowed"
+                  style={{ color: "#C8BBA8", border: "1px solid rgba(201,162,39,0.1)" }}
+                >
+                  <ChevronLeft className="h-3 w-3" />
+                  Anterior
+                </span>
+              )}
+              {page < pages ? (
+                <Link
+                  href={`/admin/products?page=${page + 1}`}
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium transition-colors hover:text-[#C9A227]"
+                  style={{ color: "#C8BBA8", border: "1px solid rgba(201,162,39,0.2)" }}
+                >
+                  Próxima
+                  <ChevronRight className="h-3 w-3" />
+                </Link>
+              ) : (
+                <span
+                  className="flex items-center gap-1 px-3 py-1.5 rounded-lg text-xs font-medium opacity-30 cursor-not-allowed"
+                  style={{ color: "#C8BBA8", border: "1px solid rgba(201,162,39,0.1)" }}
+                >
+                  Próxima
+                  <ChevronRight className="h-3 w-3" />
+                </span>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

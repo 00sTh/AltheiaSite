@@ -1,5 +1,6 @@
 "use server";
 
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { PRODUCTS_PER_PAGE } from "@/lib/constants";
 import type { ProductWithCategory } from "@/types";
@@ -11,6 +12,7 @@ interface GetProductsParams {
   featured?: boolean;
   search?: string;
   take?: number;
+  skipCount?: boolean;
 }
 
 /** Retorna produtos com paginação e filtros opcionais */
@@ -19,7 +21,7 @@ export async function getProducts(params: GetProductsParams = {}): Promise<{
   total: number;
   pages: number;
 }> {
-  const { categorySlug, page = 1, featured, search, take } = params;
+  const { categorySlug, page = 1, featured, search, take, skipCount } = params;
 
   const where = {
     active: true,
@@ -47,34 +49,45 @@ export async function getProducts(params: GetProductsParams = {}): Promise<{
     }),
   };
 
-  const [products, total] = await Promise.all([
-    prisma.product.findMany({
-      where,
-      include: { category: true },
-      orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
-      take: take ?? PRODUCTS_PER_PAGE,
-      skip: (page - 1) * PRODUCTS_PER_PAGE,
-    }),
-    prisma.product.count({ where }),
-  ]);
+  const [products, total] = skipCount
+    ? [
+        await prisma.product.findMany({
+          where,
+          include: { category: true },
+          orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+          take: take ?? PRODUCTS_PER_PAGE,
+          skip: 0,
+        }),
+        0,
+      ]
+    : await Promise.all([
+        prisma.product.findMany({
+          where,
+          include: { category: true },
+          orderBy: [{ featured: "desc" }, { createdAt: "desc" }],
+          take: take ?? PRODUCTS_PER_PAGE,
+          skip: (page - 1) * PRODUCTS_PER_PAGE,
+        }),
+        prisma.product.count({ where }),
+      ]);
 
   return {
     products: products as ProductWithCategory[],
     total,
-    pages: Math.ceil(total / PRODUCTS_PER_PAGE),
+    pages: Math.ceil(total / (PRODUCTS_PER_PAGE || 1)),
   };
 }
 
-/** Busca um produto pelo slug */
-export async function getProductBySlug(
+/** Busca um produto pelo slug (cache() deduplica entre generateMetadata e page) */
+export const getProductBySlug = cache(async (
   slug: string
-): Promise<ProductWithCategory | null> {
+): Promise<ProductWithCategory | null> => {
   const product = await prisma.product.findUnique({
     where: { slug, active: true },
     include: { category: true },
   });
   return product as ProductWithCategory | null;
-}
+});
 
 /** Busca produtos por lista de IDs (usado pelo carrinho guest) */
 export async function getProductsByIds(ids: string[]) {

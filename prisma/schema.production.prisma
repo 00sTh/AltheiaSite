@@ -82,6 +82,7 @@ model Product {
   @@index([categoryId])
   @@index([featured])
   @@index([active])
+  @@index([createdAt])
   @@map("products")
 }
 
@@ -151,6 +152,8 @@ model Order {
 
   @@index([userProfileId])
   @@index([status])
+  @@index([createdAt])
+  @@index([cieloPaymentId])
   @@map("orders")
 }
 

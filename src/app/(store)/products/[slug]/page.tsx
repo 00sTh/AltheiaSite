@@ -65,7 +65,7 @@ export default async function ProductPage({ params }: ProductPageProps) {
   // Fetch wishlist state and related products in parallel
   const [inWishlist, { products: related }] = await Promise.all([
     userId ? isInWishlist(product.id) : Promise.resolve(false),
-    getProducts({ categorySlug: product.category.slug, take: 5 }),
+    getProducts({ categorySlug: product.category.slug, take: 5, skipCount: true }),
   ]);
   const relatedProducts = related.filter((p) => p.id !== product.id).slice(0, 4);
 

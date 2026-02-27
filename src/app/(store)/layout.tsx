@@ -2,7 +2,7 @@ import { Navbar } from "@/components/layout/navbar";
 import { Footer } from "@/components/layout/footer";
 import { GuestCartSync } from "@/components/layout/guest-cart-sync";
 import { WhatsAppFab } from "@/components/ui/whatsapp-fab";
-import { prisma } from "@/lib/prisma";
+import { getSiteSettings } from "@/actions/admin";
 
 /** Layout compartilhado pela loja (todas as páginas públicas) */
 export default async function StoreLayout({
@@ -10,10 +10,7 @@ export default async function StoreLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const settings = await prisma.siteSettings.findUnique({
-    where: { id: "default" },
-    select: { whatsappNumber: true },
-  });
+  const settings = await getSiteSettings();
 
   return (
     <div className="flex min-h-screen flex-col">
