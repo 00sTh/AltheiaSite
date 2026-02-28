@@ -20,6 +20,7 @@ Versão atual: **0.9.1** (main — produção).
 | framer-motion | ^12 | Animações |
 | Zod | ^3 | Validação |
 | nodemailer | ^8 | E-mail |
+| cloudinary | ^2 | Upload de imagens (banco de mídia) |
 
 > **Stripe foi removido** — gateway é Cielo. Stripe package pode estar instalado mas não é usado.
 
@@ -167,8 +168,8 @@ src/
   lib/
     prisma.ts                        — Singleton Prisma
     auth.ts                          — getServerAuth() (Clerk apenas)
+    blob.ts                          — uploadImage() via Cloudinary (prod) ou local (dev)
     cielo.ts                         — Integração Cielo
-    blob.ts                          — Upload local public/uploads/ (Vercel Blob comentado)
     animations.ts                    — framer-motion variants
     utils.ts                         — cn(), formatPrice(), truncate(), parseImages()
     constants.ts                     — APP_NAME, ORDER_STATUS_LABEL, etc.

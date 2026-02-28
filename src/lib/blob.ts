@@ -1,10 +1,8 @@
 /**
- * src/lib/blob.ts — Upload de imagens
+ * src/lib/blob.ts — Upload de imagens via Cloudinary
  *
- * Providers (em ordem de prioridade):
- *  1. Cloudinary (CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET)
- *  2. Vercel Blob  (BLOB_READ_WRITE_TOKEN) — requer store pública
- *  3. Local        (public/uploads/) — apenas dev
+ * Produção: CLOUDINARY_CLOUD_NAME + CLOUDINARY_API_KEY + CLOUDINARY_API_SECRET
+ * Dev local: salva em public/uploads/ (servido estaticamente)
  */
 
 import fs from "fs/promises";
@@ -19,7 +17,7 @@ export async function uploadImage(
   file: Buffer | Blob,
   filename: string
 ): Promise<UploadResult> {
-  // ── 1. Cloudinary ──────────────────────────────────────────────────────────
+  // ── Cloudinary (produção) ──────────────────────────────────────────────────
   if (
     process.env.CLOUDINARY_CLOUD_NAME &&
     process.env.CLOUDINARY_API_KEY &&
@@ -52,14 +50,7 @@ export async function uploadImage(
     return { url: result.secure_url, pathname: result.public_id };
   }
 
-  // ── 2. Vercel Blob (requer store pública) ─────────────────────────────────
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { put } = await import("@vercel/blob");
-    const blob = await put(`uploads/${filename}`, file, { access: "public" });
-    return { url: blob.url, pathname: blob.pathname };
-  }
-
-  // ── 3. Fallback local: public/uploads/ (apenas dev) ───────────────────────
+  // ── Fallback local: public/uploads/ (apenas dev) ───────────────────────────
   const uploadsDir = path.join(process.cwd(), "public", "uploads");
   try {
     await fs.mkdir(uploadsDir, { recursive: true });
@@ -92,17 +83,9 @@ export async function deleteImage(pathname: string): Promise<void> {
       api_key:    process.env.CLOUDINARY_API_KEY,
       api_secret: process.env.CLOUDINARY_API_SECRET,
     });
-    // pathname é o public_id no Cloudinary
     if (!pathname.startsWith("/uploads/") && !pathname.startsWith("uploads/")) {
       await cloudinary.uploader.destroy(pathname);
     }
-    return;
-  }
-
-  // ── Vercel Blob ─────────────────────────────────────────────────────────────
-  if (process.env.BLOB_READ_WRITE_TOKEN) {
-    const { del } = await import("@vercel/blob");
-    await del(pathname);
     return;
   }
 
