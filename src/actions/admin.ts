@@ -434,19 +434,32 @@ export async function createMediaAsset(formData: FormData) {
     return { success: true, id: asset.id, url: asset.url };
   }
 
-  // ── Imagem via arquivo (requer Vercel Blob em produção) ────────────────────
+  // ── Imagem via arquivo ─────────────────────────────────────────────────────
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { success: false, error: "Arquivo obrigatório" };
 
   const ext = file.name.split(".").pop() ?? "jpg";
   const filename = `media-${Date.now()}.${ext}`;
+
+  // Debug: log env vars presentes (sem expor valores)
+  console.log("[upload] env check:", {
+    CLOUDINARY_CLOUD_NAME: !!process.env.CLOUDINARY_CLOUD_NAME,
+    CLOUDINARY_API_KEY: !!process.env.CLOUDINARY_API_KEY,
+    CLOUDINARY_API_SECRET: !!process.env.CLOUDINARY_API_SECRET,
+    file: file.name,
+    size: file.size,
+  });
+
   let url: string;
   try {
     const buffer = Buffer.from(await file.arrayBuffer());
     const result = await uploadImage(buffer, filename);
     url = result.url;
+    console.log("[upload] sucesso:", url);
   } catch (uploadErr) {
-    return { success: false, error: (uploadErr as Error).message };
+    const msg = (uploadErr as Error).message;
+    console.error("[upload] erro:", msg);
+    return { success: false, error: msg };
   }
 
   const asset = await prisma.mediaAsset.create({
