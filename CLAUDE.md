@@ -1,10 +1,10 @@
-# CLAUDE.md — AltheiaSite v0.8.1
+# CLAUDE.md — AltheiaSite v0.9.1
 
 > **REGRA:** Sempre atualizar este arquivo após qualquer mudança significativa de arquitetura, features ou convenções.
 
 ## Visão Geral
 E-commerce de cosméticos para a empresa Althéia. Plataforma de luxo com tema Emerald + Gold.
-Versão atual: **0.9.0** (main — produção).
+Versão atual: **0.9.1** (main — produção).
 
 ## Stack
 | Tecnologia | Versão | Propósito |
@@ -264,6 +264,14 @@ source /home/sth/.nvm/nvm.sh && cd /home/sth/AltheiaSite && npm run build:prod
 - `npm run build:prod` copia schema.production.prisma antes do build
 - **Após qualquer schema change:** rodar `prisma db push` com DIRECT_URL do Neon antes ou logo após o deploy
 
+## Clerk — Dashboard Settings (não há config em código)
+- Verificação de email no login/cadastro: **Clerk Dashboard → Configure → User & Authentication → Email, Phone, Username**
+  - `Authentication strategies`: trocar `Email verification code` → `Password` para remover OTP
+  - `Email address`: desmarcar `Require email address verification` para remover verificação no cadastro
+- Role admin: `{ "role": "admin" }` em Public metadata do usuário no Clerk dashboard
+- JWT template: Configure → Sessions → `{ "metadata": "{{user.public_metadata}}" }`
+- As páginas sign-in/sign-up usam apenas `<SignIn />` e `<SignUp />` — comportamento vem 100% do Dashboard
+
 ## Bugs corrigidos pós-deploy (não regredir)
 - `layout.tsx`: SEMPRE `<ClerkProvider><ClerkAuthBridge>{children}</ClerkAuthBridge></ClerkProvider>`
 - `context/auth.tsx`: `ClerkAuthBridge` usa import estático `import { useUser } from "@clerk/nextjs"` — NUNCA usar `require()` dinâmico
@@ -283,9 +291,15 @@ npm run test:e2e:ui
 ```
 
 ## Branches
-- `main` — produção (v0.9.0)
+- `main` — produção (v0.9.1)
+- `staging` — testes pré-deploy (branch dedicada para validar antes de ir pra main)
 - `Altheia-0.8.0` — estado v0.7.0 antes das correções v0.8.0
 - `Altheia-0.7.0` — gateway Cielo + account redesign
 - `Altheia-0.6.0` — categorias CRUD + checkout WhatsApp + WhyAltheia dinâmica
 - `Altheia-0.5.0` — admin completo + banco de mídia + lumina dinâmica + logo nav
 - `feature/luxury-redesign-complete` — redesign Emerald/Gold base
+
+## Fluxo de deploy recomendado
+1. Desenvolver em branch local → merge/push para `staging`
+2. Testar em staging (Vercel Preview ou npm run dev)
+3. Quando validado → PR/merge de `staging` para `main` → deploy automático Vercel
