@@ -409,6 +409,7 @@ export async function createMediaAsset(formData: FormData) {
   const type = (formData.get("type") as string) || "IMAGE";
   const name = (formData.get("name") as string) || "";
 
+  // ── Vídeo (URL) ────────────────────────────────────────────────────────────
   if (type === "VIDEO") {
     const url = formData.get("url") as string;
     if (!url) return { success: false, error: "URL obrigatória para vídeo" };
@@ -419,7 +420,21 @@ export async function createMediaAsset(formData: FormData) {
     return { success: true, id: asset.id, url: asset.url };
   }
 
-  // IMAGE upload
+  // ── Imagem via URL ─────────────────────────────────────────────────────────
+  const imageMode = (formData.get("imageMode") as string) || "url";
+  if (imageMode === "url") {
+    const imageUrl = formData.get("imageUrl") as string;
+    if (!imageUrl) return { success: false, error: "URL da imagem obrigatória" };
+    if (!/^https?:\/\//i.test(imageUrl))
+      return { success: false, error: "URL inválida — deve começar com https://" };
+    const asset = await prisma.mediaAsset.create({
+      data: { name: name || imageUrl, url: imageUrl, type: "IMAGE" },
+    });
+    revalidatePath("/admin/media");
+    return { success: true, id: asset.id, url: asset.url };
+  }
+
+  // ── Imagem via arquivo (requer Vercel Blob em produção) ────────────────────
   const file = formData.get("file") as File | null;
   if (!file || file.size === 0) return { success: false, error: "Arquivo obrigatório" };
 
@@ -435,12 +450,7 @@ export async function createMediaAsset(formData: FormData) {
   }
 
   const asset = await prisma.mediaAsset.create({
-    data: {
-      name: name || file.name,
-      url,
-      type: "IMAGE",
-      size: file.size,
-    },
+    data: { name: name || file.name, url, type: "IMAGE", size: file.size },
   });
 
   revalidatePath("/admin/media");
