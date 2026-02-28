@@ -303,3 +303,18 @@ npm run test:e2e:ui
 1. Desenvolver em branch local → merge/push para `staging`
 2. Testar em staging (Vercel Preview ou npm run dev)
 3. Quando validado → PR/merge de `staging` para `main` → deploy automático Vercel
+
+---
+
+## Pro Workflow
+
+### Self-Correction
+When corrected, propose rule → add to LEARNED after approval.
+
+### Planning
+Multi-file: plan first, wait for "proceed".
+
+### Quality
+After edits: lint, typecheck, test.
+
+### LEARNED
