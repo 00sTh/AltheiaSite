@@ -1,44 +1,163 @@
 "use client";
 
-import { useState, useTransition, useRef } from "react";
-import { Upload, Link2, Loader2, X, Image as ImageIcon, Film, Info } from "lucide-react";
-import { createMediaAsset } from "@/actions/admin";
+import { useState, useRef } from "react";
+import { Upload, Link2, Loader2, X, Image as ImageIcon, Film, Info, CheckCircle } from "lucide-react";
+import { createMediaAsset, getCloudinarySignature } from "@/actions/admin";
 
 export function MediaUploadForm() {
   const [tab, setTab] = useState<"image" | "video">("image");
   const [imageMode, setImageMode] = useState<"file" | "url">("url");
-  const [isPending, startTransition] = useTransition();
+  const [isPending, setIsPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
+  const [progress, setProgress] = useState<number | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const formRef = useRef<HTMLFormElement>(null);
+  const nameRef = useRef<HTMLInputElement>(null);
+  const imageUrlRef = useRef<HTMLInputElement>(null);
+  const videoUrlRef = useRef<HTMLInputElement>(null);
 
   function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const f = e.target.files?.[0];
     if (f) setPreview(URL.createObjectURL(f));
   }
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  function resetForm() {
+    setPreview(null);
+    setProgress(null);
+    if (fileInputRef.current) fileInputRef.current.value = "";
+    if (nameRef.current) nameRef.current.value = "";
+    if (imageUrlRef.current) imageUrlRef.current.value = "";
+    if (videoUrlRef.current) videoUrlRef.current.value = "";
+  }
+
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     setSuccess(false);
-    const formData = new FormData(e.currentTarget);
-    formData.set("type", tab === "image" ? "IMAGE" : "VIDEO");
-    if (tab === "image") formData.set("imageMode", imageMode);
+    setIsPending(true);
 
-    startTransition(async () => {
-      const result = await createMediaAsset(formData);
-      if (result.success) {
-        setPreview(null);
+    try {
+      const name = nameRef.current?.value ?? "";
+
+      // ── Vídeo via URL ──────────────────────────────────────────────────────
+      if (tab === "video") {
+        const url = videoUrlRef.current?.value ?? "";
+        if (!url) { setError("URL do vídeo obrigatória"); return; }
+        const fd = new FormData();
+        fd.set("type", "VIDEO");
+        fd.set("name", name);
+        fd.set("url", url);
+        const result = await createMediaAsset(fd);
+        if (!result.success) { setError(result.error ?? "Erro"); return; }
+        resetForm();
         setSuccess(true);
-        if (fileInputRef.current) fileInputRef.current.value = "";
-        formRef.current?.reset();
-        setTimeout(() => setSuccess(false), 3000);
-      } else {
-        setError(result.error ?? "Erro ao salvar");
+        setTimeout(() => setSuccess(false), 4000);
+        return;
       }
-    });
+
+      // ── Imagem via URL ─────────────────────────────────────────────────────
+      if (imageMode === "url") {
+        const url = imageUrlRef.current?.value ?? "";
+        if (!url) { setError("URL da imagem obrigatória"); return; }
+        const fd = new FormData();
+        fd.set("type", "IMAGE");
+        fd.set("imageMode", "url");
+        fd.set("name", name);
+        fd.set("imageUrl", url);
+        const result = await createMediaAsset(fd);
+        if (!result.success) { setError(result.error ?? "Erro"); return; }
+        resetForm();
+        setSuccess(true);
+        setTimeout(() => setSuccess(false), 4000);
+        return;
+      }
+
+      // ── Imagem via arquivo → upload direto ao Cloudinary ──────────────────
+      const file = fileInputRef.current?.files?.[0];
+      if (!file) { setError("Selecione um arquivo"); return; }
+
+      // 1. Obter assinatura do servidor
+      setProgress(5);
+      console.log("[upload] solicitando assinatura Cloudinary...");
+      const sigResult = await getCloudinarySignature();
+      if (!sigResult.success) {
+        setError(sigResult.error);
+        console.error("[upload] erro ao obter assinatura:", sigResult.error);
+        return;
+      }
+
+      // 2. Upload direto browser → Cloudinary via XMLHttpRequest (com progresso)
+      const { cloudName, apiKey, timestamp, signature } = sigResult;
+      const uploadUrl = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+
+      const uploadData = new FormData();
+      uploadData.append("file", file);
+      uploadData.append("api_key", String(apiKey));
+      uploadData.append("timestamp", String(timestamp));
+      uploadData.append("signature", signature);
+      uploadData.append("folder", "altheia");
+
+      console.log("[upload] enviando para Cloudinary:", { cloudName, fileName: file.name, size: file.size });
+
+      const cloudUrl = await new Promise<string>((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", uploadUrl);
+
+        xhr.upload.onprogress = (ev) => {
+          if (ev.lengthComputable) {
+            const pct = Math.round((ev.loaded / ev.total) * 90);
+            setProgress(5 + pct);
+          }
+        };
+
+        xhr.onload = () => {
+          if (xhr.status === 200) {
+            const data = JSON.parse(xhr.responseText) as { secure_url: string };
+            console.log("[upload] Cloudinary sucesso:", data.secure_url);
+            resolve(data.secure_url);
+          } else {
+            const err = `Cloudinary retornou ${xhr.status}: ${xhr.responseText}`;
+            console.error("[upload] erro Cloudinary:", err);
+            reject(new Error(err));
+          }
+        };
+
+        xhr.onerror = () => {
+          const err = "Falha de rede ao conectar com Cloudinary";
+          console.error("[upload] erro de rede:", err);
+          reject(new Error(err));
+        };
+
+        xhr.send(uploadData);
+      });
+
+      // 3. Salvar URL no banco
+      setProgress(97);
+      console.log("[upload] salvando no banco:", cloudUrl);
+      const fd = new FormData();
+      fd.set("type", "IMAGE");
+      fd.set("imageMode", "file");
+      fd.set("name", name || file.name);
+      fd.set("uploadedUrl", cloudUrl);
+      const saveResult = await createMediaAsset(fd);
+      if (!saveResult.success) {
+        setError(saveResult.error ?? "Erro ao salvar no banco");
+        return;
+      }
+
+      setProgress(100);
+      resetForm();
+      setSuccess(true);
+      setTimeout(() => { setSuccess(false); setProgress(null); }, 4000);
+
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Erro desconhecido";
+      console.error("[upload] erro:", msg);
+      setError(msg);
+    } finally {
+      setIsPending(false);
+    }
   }
 
   const inputStyle = {
@@ -113,22 +232,23 @@ export function MediaUploadForm() {
       )}
       {success && (
         <div
-          className="rounded-xl px-4 py-2 text-sm mb-4"
+          className="flex items-center gap-2 rounded-xl px-4 py-2 text-sm mb-4"
           style={{
             backgroundColor: "rgba(74,222,128,0.1)",
             color: "#4ADE80",
             border: "1px solid rgba(74,222,128,0.2)",
           }}
         >
+          <CheckCircle className="h-4 w-4 shrink-0" />
           Mídia salva com sucesso!
         </div>
       )}
 
-      <form ref={formRef} onSubmit={handleSubmit} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         {/* Nome */}
         <div>
           <label style={labelStyle}>Nome (opcional)</label>
-          <input name="name" style={inputStyle} placeholder="Nome para identificação" />
+          <input ref={nameRef} name="name" style={inputStyle} placeholder="Nome para identificação" />
         </div>
 
         {/* ── IMAGEM ── */}
@@ -168,7 +288,7 @@ export function MediaUploadForm() {
                 <div className="flex items-center gap-2">
                   <Link2 className="h-4 w-4 shrink-0" style={{ color: "rgba(201,162,39,0.5)" }} />
                   <input
-                    name="imageUrl"
+                    ref={imageUrlRef}
                     type="url"
                     style={inputStyle}
                     placeholder="https://exemplo.com/imagem.jpg"
@@ -182,7 +302,6 @@ export function MediaUploadForm() {
             ) : (
               <div>
                 <label style={labelStyle}>Arquivo de imagem</label>
-                {/* Aviso se não tiver Vercel Blob configurado */}
                 <div
                   className="flex items-start gap-2 rounded-xl p-3 mb-3 text-xs"
                   style={{
@@ -193,14 +312,28 @@ export function MediaUploadForm() {
                 >
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#C9A227" }} />
                   <span>
-                    Upload via <strong style={{ color: "#C9A227" }}>Cloudinary</strong>.
-                    Certifique-se de que as variáveis{" "}
-                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_CLOUD_NAME</code>,{" "}
-                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_API_KEY</code> e{" "}
-                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_API_SECRET</code>{" "}
-                    estão configuradas no Vercel. Máximo 10 MB.
+                    Upload direto para o <strong style={{ color: "#C9A227" }}>Cloudinary</strong> — sem limite de tamanho pela plataforma. Suporta JPG, PNG, WebP.
                   </span>
                 </div>
+
+                {/* Barra de progresso */}
+                {progress !== null && (
+                  <div className="mb-3">
+                    <div
+                      className="h-1.5 rounded-full overflow-hidden"
+                      style={{ backgroundColor: "rgba(201,162,39,0.15)" }}
+                    >
+                      <div
+                        className="h-full rounded-full transition-all duration-300"
+                        style={{ width: `${progress}%`, backgroundColor: "#C9A227" }}
+                      />
+                    </div>
+                    <p className="text-xs mt-1" style={{ color: "rgba(200,187,168,0.5)" }}>
+                      {progress < 97 ? `Enviando... ${progress}%` : "Salvando..."}
+                    </p>
+                  </div>
+                )}
+
                 {preview && (
                   <div className="relative mb-2 inline-block">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -229,7 +362,6 @@ export function MediaUploadForm() {
                   <input
                     ref={fileInputRef}
                     type="file"
-                    name="file"
                     accept="image/*"
                     className="hidden"
                     onChange={handleFileChange}
@@ -248,7 +380,7 @@ export function MediaUploadForm() {
             <div className="flex items-center gap-2">
               <Link2 className="h-4 w-4 shrink-0" style={{ color: "rgba(201,162,39,0.5)" }} />
               <input
-                name="url"
+                ref={videoUrlRef}
                 type="url"
                 style={inputStyle}
                 placeholder="https://youtube.com/watch?v=..."
@@ -288,7 +420,9 @@ export function MediaUploadForm() {
             <Link2 className="h-4 w-4" />
           )}
           {isPending
-            ? "Salvando..."
+            ? progress !== null
+              ? "Enviando para Cloudinary..."
+              : "Salvando..."
             : tab === "image" && imageMode === "file"
             ? "Fazer upload"
             : "Salvar URL"}
