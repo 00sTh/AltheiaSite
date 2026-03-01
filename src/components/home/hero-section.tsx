@@ -6,7 +6,7 @@ import type { Variants } from "framer-motion";
 import { ArrowRight, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import Image from "next/image";
 import { GoldButton } from "@/components/ui/gold-button";
-import { useRef, useState, type RefObject } from "react";
+import { useRef, useState, useEffect, type RefObject } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -86,12 +86,39 @@ function VideoControls({
 
 function VideoBackground({
   url,
-  iframeRef,
+  iframeRef: externalRef,
 }: {
   url: string;
   iframeRef?: RefObject<HTMLIFrameElement | null>;
 }) {
+  const internalRef = useRef<HTMLIFrameElement>(null);
+  const iframeRef = externalRef ?? internalRef;
   const embedUrl = toYouTubeEmbed(url);
+
+  // When the video ends (state=0) seek back to 0 immediately — avoids the
+  // brief black frame that YouTube shows before its own loop kicks in.
+  // We filter by e.source so each VideoBackground only reacts to its own iframe.
+  useEffect(() => {
+    if (!embedUrl) return;
+    const handler = (e: MessageEvent) => {
+      if (e.source !== iframeRef.current?.contentWindow) return;
+      try {
+        const data = JSON.parse(e.data as string);
+        if (data.event === "onStateChange" && data.info === 0) {
+          iframeRef.current?.contentWindow?.postMessage(
+            JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }),
+            "*"
+          );
+          iframeRef.current?.contentWindow?.postMessage(
+            JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+            "*"
+          );
+        }
+      } catch { /* ignore non-JSON messages */ }
+    };
+    window.addEventListener("message", handler);
+    return () => window.removeEventListener("message", handler);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps — refs are stable
 
   if (embedUrl) {
     return (
