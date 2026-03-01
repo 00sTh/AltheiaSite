@@ -193,19 +193,12 @@ export function MediaUploadForm() {
                 >
                   <Info className="h-3.5 w-3.5 shrink-0 mt-0.5" style={{ color: "#C9A227" }} />
                   <span>
-                    Upload de arquivo requer{" "}
-                    <strong style={{ color: "#C9A227" }}>Vercel Blob</strong> configurado
-                    (env var <code style={{ color: "#C8BBA8" }}>BLOB_READ_WRITE_TOKEN</code>).
-                    Se não tiver, use a opção{" "}
-                    <button
-                      type="button"
-                      onClick={() => setImageMode("url")}
-                      className="underline"
-                      style={{ color: "#C9A227" }}
-                    >
-                      Colar URL
-                    </button>
-                    .
+                    Upload via <strong style={{ color: "#C9A227" }}>Cloudinary</strong>.
+                    Certifique-se de que as variáveis{" "}
+                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_CLOUD_NAME</code>,{" "}
+                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_API_KEY</code> e{" "}
+                    <code style={{ color: "#C8BBA8" }}>CLOUDINARY_API_SECRET</code>{" "}
+                    estão configuradas no Vercel. Máximo 10 MB.
                   </span>
                 </div>
                 {preview && (
