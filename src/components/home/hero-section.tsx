@@ -34,8 +34,9 @@ function toYouTubeEmbed(url: string): string | null {
       id = u.searchParams.get("v");
     }
     if (!id) return null;
-    // iv_load_policy=3 hides annotations; enablejsapi=1 enables postMessage control
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&rel=0&playsinline=1&disablekb=1&iv_load_policy=3&enablejsapi=1`;
+    // No loop=1 — we handle looping via JS (seekTo 0 on end) to avoid the black flash.
+    // iv_load_policy=3 hides annotations; enablejsapi=1 enables postMessage events.
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&controls=0&rel=0&playsinline=1&disablekb=1&iv_load_policy=3&enablejsapi=1`;
   } catch {
     return null;
   }
@@ -95,30 +96,50 @@ function VideoBackground({
   const iframeRef = externalRef ?? internalRef;
   const embedUrl = toYouTubeEmbed(url);
 
-  // When the video ends (state=0) seek back to 0 immediately — avoids the
-  // brief black frame that YouTube shows before its own loop kicks in.
-  // We filter by e.source so each VideoBackground only reacts to its own iframe.
+  // Handle seamless looping via JS instead of YouTube's native loop=1.
+  // With loop=1 the YouTube player loops internally WITHOUT emitting state=0,
+  // so the black frame fix never fires. Removing loop=1 means YouTube emits
+  // state=0 when the video ends and we restart immediately via postMessage.
+  //
+  // YouTube sends two event types we need to handle:
+  //   onReady  → register addEventListener("onStateChange") to receive callbacks
+  //   onStateChange info=0  → video ended, seek to 0 and play
+  //   infoDelivery info.playerState=0 → same, alternate format
+  //
+  // e.source filter ensures each VideoBackground only reacts to its own iframe.
   useEffect(() => {
     if (!embedUrl) return;
+
+    const restart = () => {
+      const win = iframeRef.current?.contentWindow;
+      if (!win) return;
+      win.postMessage(JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }), "*");
+      win.postMessage(JSON.stringify({ event: "command", func: "playVideo", args: [] }), "*");
+    };
+
     const handler = (e: MessageEvent) => {
+      if (!e.origin.includes("youtube.com")) return;
       if (e.source !== iframeRef.current?.contentWindow) return;
       try {
         const data = JSON.parse(e.data as string);
-        if (data.event === "onStateChange" && data.info === 0) {
+        // After player ready, register for onStateChange callbacks
+        if (data.event === "onReady") {
           iframeRef.current?.contentWindow?.postMessage(
-            JSON.stringify({ event: "command", func: "seekTo", args: [0, true] }),
-            "*"
-          );
-          iframeRef.current?.contentWindow?.postMessage(
-            JSON.stringify({ event: "command", func: "playVideo", args: [] }),
+            JSON.stringify({ event: "command", func: "addEventListener", args: ["onStateChange"] }),
             "*"
           );
         }
+        // Detect ended state from both possible event formats
+        const ended =
+          (data.event === "onStateChange" && data.info === 0) ||
+          (data.event === "infoDelivery" && data.info?.playerState === 0);
+        if (ended) restart();
       } catch { /* ignore non-JSON messages */ }
     };
+
     window.addEventListener("message", handler);
     return () => window.removeEventListener("message", handler);
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps — refs are stable
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps — refs and embedUrl stable after mount
 
   if (embedUrl) {
     return (
