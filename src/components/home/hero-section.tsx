@@ -3,9 +3,10 @@
 import Link from "next/link";
 import { motion } from "framer-motion";
 import type { Variants } from "framer-motion";
-import { ArrowRight, Play } from "lucide-react";
+import { ArrowRight, Play, Pause, Volume2, VolumeX } from "lucide-react";
 import Image from "next/image";
 import { GoldButton } from "@/components/ui/gold-button";
+import { useRef, useState, type RefObject } from "react";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,31 +34,86 @@ function toYouTubeEmbed(url: string): string | null {
       id = u.searchParams.get("v");
     }
     if (!id) return null;
-    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&rel=0&playsinline=1&disablekb=1&modestbranding=1`;
+    // iv_load_policy=3 hides annotations; enablejsapi=1 enables postMessage control
+    return `https://www.youtube.com/embed/${id}?autoplay=1&mute=1&loop=1&playlist=${id}&controls=0&rel=0&playsinline=1&disablekb=1&iv_load_policy=3&enablejsapi=1`;
   } catch {
     return null;
   }
 }
 
+// ─── YouTube postMessage ──────────────────────────────────────────────────────
+
+function ytCmd(ref: RefObject<HTMLIFrameElement | null>, func: string) {
+  ref.current?.contentWindow?.postMessage(
+    JSON.stringify({ event: "command", func, args: [] }),
+    "*"
+  );
+}
+
+// ─── Video controls UI ───────────────────────────────────────────────────────
+
+function VideoControls({
+  isMuted,
+  isPaused,
+  onMuteToggle,
+  onPauseToggle,
+}: {
+  isMuted: boolean;
+  isPaused: boolean;
+  onMuteToggle: () => void;
+  onPauseToggle: () => void;
+}) {
+  const btn =
+    "flex items-center justify-center w-8 h-8 rounded-full border transition-opacity opacity-60 hover:opacity-100";
+  const bStyle = {
+    backgroundColor: "rgba(10,35,25,0.72)",
+    borderColor: "rgba(201,162,39,0.45)",
+    color: "#C9A227",
+  };
+  return (
+    <div className="flex gap-2">
+      <button onClick={onPauseToggle} aria-label={isPaused ? "Reproduzir" : "Pausar"} className={btn} style={bStyle}>
+        {isPaused ? <Play className="w-3.5 h-3.5 ml-0.5" /> : <Pause className="w-3.5 h-3.5" />}
+      </button>
+      <button onClick={onMuteToggle} aria-label={isMuted ? "Ativar som" : "Silenciar"} className={btn} style={bStyle}>
+        {isMuted ? <VolumeX className="w-3.5 h-3.5" /> : <Volume2 className="w-3.5 h-3.5" />}
+      </button>
+    </div>
+  );
+}
+
 // ─── Video background ─────────────────────────────────────────────────────────
 
-function VideoBackground({ url }: { url: string }) {
+function VideoBackground({
+  url,
+  iframeRef,
+}: {
+  url: string;
+  iframeRef?: RefObject<HTMLIFrameElement | null>;
+}) {
   const embedUrl = toYouTubeEmbed(url);
 
   if (embedUrl) {
     return (
-      <iframe
-        src={embedUrl}
-        title="Background video"
-        allow="autoplay; encrypted-media"
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-0 pointer-events-none"
-        style={{
-          height: "100vh",
-          width: "calc(100vh * 16 / 9)",
-          minWidth: "100%",
-          minHeight: "100%",
-        }}
-      />
+      // overflow-hidden clips the scale(1.1) excess, hiding YouTube title/info bars at edges
+      <div className="absolute inset-0 overflow-hidden">
+        <iframe
+          ref={iframeRef}
+          src={embedUrl}
+          title="Background video"
+          allow="autoplay; encrypted-media"
+          className="absolute border-0 pointer-events-none"
+          style={{
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%) scale(1.1)",
+            height: "100vh",
+            width: "calc(100vh * 16 / 9)",
+            minWidth: "100%",
+            minHeight: "100%",
+          }}
+        />
+      </div>
     );
   }
 
@@ -131,15 +187,43 @@ function SplitHero({
   rightVideoUrl?: string | null;
   heroLogoUrl?: string | null;
 }) {
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+
+  // Separate refs for mobile, desktop-left, and desktop-right iframes
+  const mobileRef = useRef<HTMLIFrameElement>(null);
+  const leftRef = useRef<HTMLIFrameElement>(null);
+  const rightRef = useRef<HTMLIFrameElement>(null);
+
+  const hasVideo = !!(leftVideoUrl || rightVideoUrl);
+
+  const sendToAll = (func: string) => {
+    ytCmd(mobileRef, func);
+    ytCmd(leftRef, func);
+    ytCmd(rightRef, func);
+  };
+
+  const handleMuteToggle = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    sendToAll(next ? "mute" : "unMute");
+  };
+
+  const handlePauseToggle = () => {
+    const next = !isPaused;
+    setIsPaused(next);
+    sendToAll(next ? "pauseVideo" : "playVideo");
+  };
+
   return (
     <section className="relative h-screen overflow-hidden">
 
       {/* ── Mobile: painel único ── */}
       <div className="md:hidden absolute inset-0">
         {leftVideoUrl ? (
-          <VideoBackground url={leftVideoUrl} />
+          <VideoBackground url={leftVideoUrl} iframeRef={mobileRef} />
         ) : rightVideoUrl ? (
-          <VideoBackground url={rightVideoUrl} />
+          <VideoBackground url={rightVideoUrl} iframeRef={mobileRef} />
         ) : (
           <EmeraldGradient />
         )}
@@ -158,7 +242,7 @@ function SplitHero({
           initial="hidden"
           animate="visible"
         >
-          {leftVideoUrl ? <VideoBackground url={leftVideoUrl} /> : <EmeraldGradient />}
+          {leftVideoUrl ? <VideoBackground url={leftVideoUrl} iframeRef={leftRef} /> : <EmeraldGradient />}
           <div
             className="absolute inset-0"
             style={{
@@ -175,7 +259,7 @@ function SplitHero({
           initial="hidden"
           animate="visible"
         >
-          {rightVideoUrl ? <VideoBackground url={rightVideoUrl} /> : <EmeraldGradient />}
+          {rightVideoUrl ? <VideoBackground url={rightVideoUrl} iframeRef={rightRef} /> : <EmeraldGradient />}
           <div
             className="absolute inset-0"
             style={{
@@ -298,6 +382,18 @@ function SplitHero({
         style={{ background: "linear-gradient(to top, #0A3D2F, transparent)" }}
       />
 
+      {/* Video controls */}
+      {hasVideo && (
+        <div className="absolute bottom-8 right-8 z-30">
+          <VideoControls
+            isMuted={isMuted}
+            isPaused={isPaused}
+            onMuteToggle={handleMuteToggle}
+            onPauseToggle={handlePauseToggle}
+          />
+        </div>
+      )}
+
       {/* Scroll indicator */}
       <motion.div
         className="absolute bottom-8 left-1/2 -translate-x-1/2 z-30"
@@ -331,27 +427,29 @@ function LegacyHero({
   heroImageUrl?: string | null;
   heroVideoUrl?: string | null;
 }) {
-  const embedUrl = heroVideoUrl ? toYouTubeEmbed(heroVideoUrl) : null;
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPaused, setIsPaused] = useState(false);
+  const videoRef = useRef<HTMLIFrameElement>(null);
+  const isYouTube = heroVideoUrl ? !!toYouTubeEmbed(heroVideoUrl) : false;
+
+  const handleMuteToggle = () => {
+    const next = !isMuted;
+    setIsMuted(next);
+    ytCmd(videoRef, next ? "mute" : "unMute");
+  };
+
+  const handlePauseToggle = () => {
+    const next = !isPaused;
+    setIsPaused(next);
+    ytCmd(videoRef, next ? "pauseVideo" : "playVideo");
+  };
 
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background */}
-      {embedUrl ? (
+      {heroVideoUrl ? (
         <>
-          <div className="absolute inset-0 overflow-hidden pointer-events-none">
-            <iframe
-              src={embedUrl}
-              title="Hero video"
-              allow="autoplay; encrypted-media"
-              className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 border-0"
-              style={{
-                height: "100vh",
-                width: "calc(100vh * 16 / 9)",
-                minWidth: "100%",
-                minHeight: "100%",
-              }}
-            />
-          </div>
+          <VideoBackground url={heroVideoUrl} iframeRef={videoRef} />
           <div
             className="absolute inset-0"
             style={{ backgroundColor: "rgba(10,61,47,0.65)" }}
@@ -448,6 +546,18 @@ function LegacyHero({
         className="absolute bottom-0 left-0 right-0 h-32 pointer-events-none"
         style={{ background: "linear-gradient(to top, #0A3D2F, transparent)" }}
       />
+
+      {/* Video controls */}
+      {isYouTube && (
+        <div className="absolute bottom-8 right-8 z-20">
+          <VideoControls
+            isMuted={isMuted}
+            isPaused={isPaused}
+            onMuteToggle={handleMuteToggle}
+            onPauseToggle={handlePauseToggle}
+          />
+        </div>
+      )}
 
       <motion.div
         className="absolute bottom-8 left-1/2 -translate-x-1/2"
